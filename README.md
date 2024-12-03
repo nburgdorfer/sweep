@@ -109,7 +109,13 @@ And similar for running inference:
 ```bash
 ./scripts/inference.sh DTU NP_CVP_MVSNet 1
 ```
+
+NOTE: We currently only support single GPU operation. This also effectively requires the following:
+```yaml
+device: cuda:0
+```
 </details>
+
 
 ## Training
 <details>
