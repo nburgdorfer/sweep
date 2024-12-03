@@ -1,0 +1,65 @@
+data_path: /home/nate/data/DTU
+output_path: /mnt/Drive1/Results/DTU/NP_CVP_MVSNet/
+device: cuda:0
+seed: 43
+num_workers: 4
+
+camera:
+    height: 1200
+    width: 1600
+    near: 425
+    far: 937
+    crop_h: 48
+    crop_w: 64
+    baseline_mode: min
+
+inference:
+    ckpt_file: pretrained_models/NP_CVP_MVSNet/DTU/model.pt
+    depth_planes: [96,32,16,8] # coarse -> fine
+    frame_spacing: 1
+    num_frame: 5
+    sample_mode: cluster
+    scale: 1.0
+    visualize: True
+    vis_freq: 1
+
+loss:
+  weights: [1,1,1,1]
+
+model:
+    feature_channels: [64,32,16,8] # coarse -> fine
+    group_channels: [8,4,4,2] # coarse -> fine
+
+point_cloud:
+  image_region_th: 2
+  depth_region_th: 2
+  pix_th: 1.0 #0.40
+  prob_th: 0.80
+  num_consistent: 3
+  mask_th: 20
+  max_dist: 0.5
+  min_dist: 0.0
+  min_point_dist: 0.2 # use 0.2 (0.03) with sparse (dense) GT point clouds
+  resolution: sparse # OPTIONS: [sparse, dense]
+
+training:
+    batch_size: 2
+    ckpt_file:
+    depth_planes: [48,32,16,8] # coarse -> fine
+    epochs: 30
+    frame_spacing: 1
+    grad_clip: 10.0
+    learning_rate: 0.0005
+    lr_steps: 10,12,14,20
+    lr_gamma: 0.50
+    max_training_samples: 5000
+    max_val_samples: 1000
+    num_frame: 5
+    random_crop: False
+    sample_mode: cluster
+    scale: 0.5
+    visualize: True
+    vis_freq: 100
+
+visualization:
+    max_depth_error: 5.0

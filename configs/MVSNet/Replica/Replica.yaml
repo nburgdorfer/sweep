@@ -1,0 +1,46 @@
+data_path: /home/nate/data/Replica/
+output_path: /home/nate/data/Results/NP_CVP_MVSNet/Replica/Output/
+device: cuda:0
+scene_list_path: configs/Replica/scene_lists/
+seed: 43
+
+camera:
+    height: 680
+    width: 1200
+    near: 0.05
+    far: 8.0
+    crop_h: 40
+    crop_w: 48
+
+eval:
+    ckpt_file: pretrained_models/NP_CVP_MVSNet/DTU/model.pt
+    frame_spacing: 5
+    num_frame: 5
+    scale: 1.0
+
+loss:
+    func: BCE
+    gt_prob_mode: soft
+
+model:
+    base_features: 8
+    gwc_groups: [2,4,4,8]
+    target_d: [8,16,32,96]
+    scale_f: 8
+
+training:
+    batch_size: 1
+    ckpt_file: #pretrained_models/NP_CVP_MVSNet/DTU/model.pt
+    epochs: 30
+    frame_spacing: 5
+    grad_clip: 10.0
+    learning_rate: 0.0005
+    lr_steps: 10,12,14,20
+    lr_gamma: 0.50
+    max_training_samples: 5000
+    max_val_samples: 500
+    mvs_ckpt_freq: 1
+    num_frame: 5
+    num_workers: 12
+    scale: 0.5
+    vis_freq: 100
