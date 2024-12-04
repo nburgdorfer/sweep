@@ -2,7 +2,7 @@
 
 ## About
 <details open>
-<summary>...</summary>
+<summary></summary>
   
 ### Current Architectures
 We are currently supporting the following network architectures:
