@@ -1,7 +1,7 @@
 # MVS-Studio: A Collection and Unification of Several Deep Multi-View Stereo Networks
 
 ## About
-<details>
+<details open>
 <summary>...</summary>
   
 ### Current Architectures
@@ -17,8 +17,8 @@ We are currently supporting the following datasets (see 'Data Preparation' for d
 </details>
 
 ## Installation
-<details>
-<summary>...</summary>
+<details open>
+<summary></summary>
   
 ### Conda Environment
 For our environment setup, we use [conda](https://www.anaconda.com/download/). Please install conda and run the following command:
@@ -62,8 +62,8 @@ pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git@v1.4.0
 </details>
 
 ## Data Preparation
-<details>
-<summary>...</summary>
+<details open>
+<summary></summary>
   
 We provide several datasets used in our experiments in an organized and consistent format:
 - [DTU](https://stevens0-my.sharepoint.com/:f:/g/personal/nburgdor_stevens_edu/Eq8I4ewt8z1Hs9JHtYLSeaMBOWBnaMgofIUk_Gbj6gisYw?e=c06ddg)
@@ -76,8 +76,8 @@ If you would like to use your own data, please feel free to create a new class f
 </details>
 
 ## Configuration
-<details>
-<summary>...</summary>
+<details open>
+<summary></summary>
   
 Before running training or inference, please update the config file for the dataset you would like to run. The config files are located under `configs/<NETWORK>/<DATASET>/` (e.g. `configs/NP_CVP_MVSNet/DTU/DTU.yaml`). The only entries that need to be modified are the ones involving path information, shown in the following:
 
@@ -92,8 +92,8 @@ eval:
 </details>
 
 ## Scripts
-<details>
-<summary>...</summary>
+<details open>
+<summary></summary>
   
 We provide two scripts, one for running training ```scripts/training.sh``` and one for running inference ```scripts/inference.sh```. These scripts take three required arguments as input:
 ```bash
@@ -118,8 +118,8 @@ device: cuda:0
 
 
 ## Training
-<details>
-<summary>...</summary>
+<details open>
+<summary></summary>
   
 When training any of the networks from scratch, a `./log/` folder will be created in the top-level directory of the repository, storing the current configuration as well as checkpoints for each epoch during training. If you would like to continue training from a specific checkpoint or pretrained model, edit the config file to include the path to the checkpoint:
 ```yaml
@@ -130,8 +130,8 @@ Please leave this key blank (or comment out the path) if you do not wish to cont
 </details>
 
 ## Inference
-<details>
-<summary>...</summary>
+<details open>
+<summary></summary>
   
 We provide [pretrained models]() (coming soon...) for our method. Simply run the inference script with the desired arguments as show above.
 
