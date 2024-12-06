@@ -3,6 +3,8 @@
 ## About
 <details open>
 <summary></summary>
+
+The motivation for this repository is to unify the current Multi-View Stereo network architectures into a single repository using the same network components to allow for a plug-and-play style framework for testing MVS architecture design. 
   
 ### Current Architectures
 We are currently supporting the following network architectures:
