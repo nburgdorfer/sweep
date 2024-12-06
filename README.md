@@ -3,6 +3,8 @@
 ## About
 <details open>
 <summary></summary>
+
+The motivation for this repository is to unify the current Multi-View Stereo network architectures into a single repository using the same network components to allow for a plug-and-play style framework for testing MVS architecture design. 
   
 ### Current Architectures
 We are currently supporting the following network architectures:
@@ -133,7 +135,13 @@ Please leave this key blank (or comment out the path) if you do not wish to cont
 <details open>
 <summary></summary>
   
-We provide [pretrained models]() (coming soon...) for our method. Simply run the inference script with the desired arguments as show above.
+We provide pretrained models for all methods:
+- Trained on DTU
+  - [MVSNet](https://stevens0-my.sharepoint.com/:f:/g/personal/nburgdor_stevens_edu/EpvpLPT9qMxOh3mbq5CYU4EBIcqLRH73TCu9gPnuuhKLIQ?e=gCOXCF)
+  - [NP-CVP-MVSNet](https://stevens0-my.sharepoint.com/:f:/g/personal/nburgdor_stevens_edu/ErMJUQi9-9RAj7frhp9tXUEBMMko4rP1jgANXmu8AuSUxQ?e=YHxyc8)
+  - [GBiNet](https://stevens0-my.sharepoint.com/:f:/g/personal/nburgdor_stevens_edu/EgriI5e8PNtKlITrrtNsQB4B1fcdDIl5_7fmlKYiDGvGhw?e=zX6sgG)
+
+Run the inference script with the desired arguments as show above.
 
 These bash scripts will run the `inference.py` python script with the appropriate config file and dataset tag. The scenes that will be processed are the ones listed in the file `configs/<NETWORK>/<DATASET>/scene_lists/inference.txt`. The format for this file is one scene per line (case-sensitive) (NOTE: empty lines will be counted as a scene. Please remove them before running the scripts). For the DTU dataset, the `inference.py` script automatically evaluates all point clouds output from our system following our dense evaluation script.
 </details>
