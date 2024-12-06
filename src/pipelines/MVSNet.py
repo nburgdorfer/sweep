@@ -24,7 +24,7 @@ from cvt.io import write_pfm
 from cvt.geometry import visibility, get_uncovered_mask, edge_mask
 from cvt.visualization import visualize_mvs, laplacian_depth_error, laplacian_count, laplacian_uncovered_count, plot_laplacian_matrix
 
-# NP-CVP-MVSNet libraries
+# MVSNet Network
 from src.networks.MVSNet import Network
 
 class Pipeline(BasePipeline):
@@ -39,9 +39,6 @@ class Pipeline(BasePipeline):
 
         final_depth = output["final_depth"]
         target_depth = F.interpolate(data["target_depth"], (final_depth.shape[2], final_depth.shape[3]))
-        #image_laplacian = data["image_laplacian"]
-        #depth_laplacian = 4 - data["depth_laplacian"]
-        #laplacian_weight = (depth_laplacian+image_laplacian) / 8
 
         batch_size, c, height, width = target_depth.shape
         assert  final_depth.shape == target_depth.shape, \
@@ -49,7 +46,6 @@ class Pipeline(BasePipeline):
 
         mask = torch.where(target_depth > self.cfg["camera"]["near"], 1.0, 0.0)
         depth_error = F.smooth_l1_loss(final_depth, target_depth, reduction='none') * mask
-        #depth_error *= laplacian_weight
         depth_error = depth_error.sum(dim=(1,2,3)) / mask.sum(dim=(1,2,3))
 
         loss["depth"] = depth_error.mean()
@@ -75,8 +71,6 @@ class Pipeline(BasePipeline):
             vis_path = self.vis_path
             data_loader = self.inference_data_loader
             title_suffix = ""
-            if visualize:
-                M = np.zeros((4,5,5))
         else:
             if mode == "training":
                 self.mvs_model.train()
@@ -101,8 +95,6 @@ class Pipeline(BasePipeline):
 
                 # Run network forward pass
                 output = self.mvs_model(data)
-                output["image_laplacian"] = laplacian_pyramid(data["images"][:,0], tau=0.1).to(torch.float32)
-                output["est_depth_laplacian"] = laplacian_pyramid(output["final_depth"], tau=1.0).to(torch.float32)
 
                 if mode != "inference":
                     # Compute loss
@@ -143,14 +135,7 @@ class Pipeline(BasePipeline):
 
                 ## Visualization
                 if (visualize and batch_ind % vis_freq == 0):
-                    data["depth_laplacian"] = laplacian_pyramid(data["target_depth"], tau=1.0)
                     visualize_mvs(data, output, batch_ind, vis_path, self.cfg["visualization"]["max_depth_error"], mode=mode, epoch=epoch)
-
-                if mode=="inference" and visualize:
-                    M[0] += laplacian_depth_error(data, output)
-                    M[1] += laplacian_depth_error(data, output, use_est_depth=True)
-                    M[2] += laplacian_count(data, output)
-                    M[3] += laplacian_count(data, output, use_est_depth=True)
 
                 if mode != "inference":
                     del loss
@@ -158,10 +143,3 @@ class Pipeline(BasePipeline):
                     del data
                     del stats
                     torch.cuda.empty_cache()
-
-        if mode=="inference" and visualize:
-            plot_laplacian_matrix((M[0]/len(data_loader)), plot_file=os.path.join(vis_path, "lap_err.png"))
-            plot_laplacian_matrix((M[1]/len(data_loader)), plot_file=os.path.join(vis_path, "lap_est_err.png"), use_est_depth=True)
-            plot_laplacian_matrix((M[2]/len(data_loader)), plot_file=os.path.join(vis_path, "lap_count.png"), count=True)
-            plot_laplacian_matrix((M[3]/len(data_loader)), plot_file=os.path.join(vis_path, "lap_est_count.png"), use_est_depth=True, count=True)
-

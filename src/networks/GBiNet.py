@@ -114,19 +114,17 @@ class Network(nn.Module):
         cost_volume = self.cost_reg[stage_id](cost_volume)
         cost_volume = cost_volume.squeeze(1)
 
+        # gather depth and subdivide depth hypotheses
         pred_hypo_index = torch.argmax(cost_volume, dim=1).to(torch.int64)
         hypotheses = hypotheses.squeeze(1)
         depth = torch.gather(hypotheses, dim=1, index=pred_hypo_index.unsqueeze(1))
         confidence = torch.max(torch.softmax(cost_volume, dim=1), dim=1, keepdim=True)[0]
         next_hypotheses = self.subdivide_hypotheses(hypotheses, pred_hypo_index, iteration)
 
+        # upsample depth and confidence maps to full resolution
         if (height, width) != (self.height, self.width):
             depth = F.interpolate(depth, size=(self.height, self.width), mode="bilinear")
             confidence = F.interpolate(confidence, size=(self.height, self.width), mode="bilinear")
-
-        # compute laplacians
-        image_laplacian = laplacian_pyramid(data["images"][:,0])
-        depth_laplacian = laplacian_pyramid(depth)
 
         output["hypotheses"] = hypotheses
         output["next_hypotheses"] = next_hypotheses
@@ -134,7 +132,5 @@ class Network(nn.Module):
         output["pred_hypo_index"] = pred_hypo_index
         output["final_depth"] = depth
         output["confidence"] = confidence
-        output["image_laplacian"] = image_laplacian
-        output["est_depth_laplacian"] = depth_laplacian
 
         return output

@@ -14,7 +14,7 @@ camera:
     baseline_mode: min
 
 inference:
-    ckpt_file: pretrained_models/MVSNet/DTU/model_0.pt
+    ckpt_file: pretrained_models/MVSNet/DTU/model.pt
     depth_planes: 256
     frame_spacing: 1
     num_frame: 5

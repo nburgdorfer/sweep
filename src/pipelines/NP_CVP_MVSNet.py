@@ -24,7 +24,7 @@ from cvt.io import write_pfm
 from cvt.geometry import visibility, get_uncovered_mask, edge_mask
 from cvt.visualization import visualize_mvs, laplacian_depth_error, laplacian_count, laplacian_uncovered_count, plot_laplacian_matrix
 
-# NP-CVP-MVSNet libraries
+# NP-CVP-MVSNet Network
 from src.networks.NP_CVP_MVSNet import Network
 
 class Pipeline(BasePipeline):
@@ -138,8 +138,6 @@ class Pipeline(BasePipeline):
             vis_path = self.vis_path
             data_loader = self.inference_data_loader
             title_suffix = f"{mode}"
-            if visualize:
-                M = np.zeros((5,5,5))
         else:
             if mode == "training":
                 self.model.train()
@@ -204,17 +202,7 @@ class Pipeline(BasePipeline):
 
                 ## Visualization
                 if (visualize and batch_ind % vis_freq == 0):
-                    data["depth_laplacian"] = laplacian_pyramid(data["target_depth"])
-                    #output["uncovered_masks"] = get_uncovered_mask(data, output)
                     visualize_mvs(data, output, batch_ind, vis_path, self.cfg["visualization"]["max_depth_error"], mode=mode, epoch=epoch)
-
-                if mode=="inference" and visualize:
-                    # accumulate laplacian matrices
-                    M[0] += laplacian_depth_error(data, output)
-                    M[1] += laplacian_depth_error(data, output, use_est_depth=True)
-                    M[2] += laplacian_count(data, output)
-                    M[3] += laplacian_count(data, output, use_est_depth=True)
-                    #M[4] += laplacian_uncovered_count(data, output)
 
                 if mode != "inference":
                     del loss
@@ -222,11 +210,3 @@ class Pipeline(BasePipeline):
                     del data
                     del stats
                     torch.cuda.empty_cache()
-
-        if mode=="inference" and visualize:
-            plot_laplacian_matrix((M[0]/len(data_loader)), plot_file=os.path.join(vis_path, "lap_err.png"))
-            plot_laplacian_matrix((M[1]/len(data_loader)), plot_file=os.path.join(vis_path, "lap_est_err.png"), use_est_depth=True)
-            plot_laplacian_matrix((M[2]/len(data_loader)), plot_file=os.path.join(vis_path, "lap_count.png"), count=True)
-            plot_laplacian_matrix((M[3]/len(data_loader)), plot_file=os.path.join(vis_path, "lap_est_count.png"), use_est_depth=True, count=True)
-            #plot_laplacian_matrix((M[4]/len(data_loader)), plot_file=os.path.join(vis_path, "lap_uncov_count.png"), count=True)
-
