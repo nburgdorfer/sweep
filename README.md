@@ -135,7 +135,13 @@ Please leave this key blank (or comment out the path) if you do not wish to cont
 <details open>
 <summary></summary>
   
-We provide [pretrained models]() (coming soon...) for our method. Simply run the inference script with the desired arguments as show above.
+We provide pretrained models for all methods:
+- Trained on DTU
+  - [MVSNet](https://stevens0-my.sharepoint.com/:u:/g/personal/nburgdor_stevens_edu/EToKCyxu2cZJklwMfP21Y9MBb3pZZJaNuPt3kuKv_rKC3w?e=ywv9Ya)
+  - [NP-CVP-MVSNet](https://stevens0-my.sharepoint.com/:u:/g/personal/nburgdor_stevens_edu/ERL0a5ApRoBMjDhlWP5HyLUBbL6cIEr3wLkbNq8KFwRE-A?e=LctOxD)
+  - [GBiNet](https://stevens0-my.sharepoint.com/:u:/g/personal/nburgdor_stevens_edu/ESCwRr4U-rlAnUxT6SPpTIQBaFv-4YpMNhKb4_5glOI17g?e=ycMTId)
+
+Run the inference script with the desired arguments as show above.
 
 These bash scripts will run the `inference.py` python script with the appropriate config file and dataset tag. The scenes that will be processed are the ones listed in the file `configs/<NETWORK>/<DATASET>/scene_lists/inference.txt`. The format for this file is one scene per line (case-sensitive) (NOTE: empty lines will be counted as a scene. Please remove them before running the scripts). For the DTU dataset, the `inference.py` script automatically evaluates all point clouds output from our system following our dense evaluation script.
 </details>
