@@ -137,9 +137,9 @@ Please leave this key blank (or comment out the path) if you do not wish to cont
   
 We provide pretrained models for all methods:
 - Trained on DTU
-  - [MVSNet](https://stevens0-my.sharepoint.com/:u:/g/personal/nburgdor_stevens_edu/EToKCyxu2cZJklwMfP21Y9MBb3pZZJaNuPt3kuKv_rKC3w?e=ywv9Ya)
-  - [NP-CVP-MVSNet](https://stevens0-my.sharepoint.com/:u:/g/personal/nburgdor_stevens_edu/ERL0a5ApRoBMjDhlWP5HyLUBbL6cIEr3wLkbNq8KFwRE-A?e=LctOxD)
-  - [GBiNet](https://stevens0-my.sharepoint.com/:u:/g/personal/nburgdor_stevens_edu/ESCwRr4U-rlAnUxT6SPpTIQBaFv-4YpMNhKb4_5glOI17g?e=ycMTId)
+  - [MVSNet](https://stevens0-my.sharepoint.com/:f:/g/personal/nburgdor_stevens_edu/EpvpLPT9qMxOh3mbq5CYU4EBIcqLRH73TCu9gPnuuhKLIQ?e=gCOXCF)
+  - [NP-CVP-MVSNet](https://stevens0-my.sharepoint.com/:f:/g/personal/nburgdor_stevens_edu/ErMJUQi9-9RAj7frhp9tXUEBMMko4rP1jgANXmu8AuSUxQ?e=YHxyc8)
+  - [GBiNet](https://stevens0-my.sharepoint.com/:f:/g/personal/nburgdor_stevens_edu/EgriI5e8PNtKlITrrtNsQB4B1fcdDIl5_7fmlKYiDGvGhw?e=zX6sgG)
 
 Run the inference script with the desired arguments as show above.
 
