@@ -34,14 +34,14 @@ model:
 point_cloud:
   image_region_th: 2
   depth_region_th: 2
-  pix_th: 0.40
-  prob_th: 0.80
+  pix_th: 0.35
+  prob_th: 0.95
   num_consistent: 3
   mask_th: 20
   max_dist: 0.5
   min_dist: 0.0
-  min_point_dist: 0.03 # use 0.2 (0.03) with sparse (dense) GT point clouds
-  resolution: dense # OPTIONS: [sparse, dense]
+  min_point_dist: 0.2 # use 0.2 (0.03) with sparse (dense) GT point clouds
+  resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
     batch_size: 4

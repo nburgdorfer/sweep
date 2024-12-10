@@ -16,12 +16,13 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
+from cvt.common import parameters_count, print_gpu_mem, to_gpu
+from cvt.io import load_pretrained_model, write_pfm, load_ckpt, save_ckpt, write_cam_sfm
+
 ## Custom libraries
 from src.config import save_config
 from src.datasets.BaseDataset import build_dataset
 from src.evaluation.eval_2d import depth_acc
-from cvt.common import parameters_count, print_gpu_mem, to_gpu
-from cvt.io import load_pretrained_model, write_pfm, load_ckpt, save_ckpt
 
 class BasePipeline():
     def __init__(self, cfg, config_path, log_path, model_name, training_scenes=None, validation_scenes=None, inference_scene=None):
@@ -52,20 +53,16 @@ class BasePipeline():
             # set data paths
             self.data_path = os.path.join(self.cfg["data_path"], self.inference_scene[0])
             self.output_path = os.path.join(self.cfg["output_path"], self.inference_scene[0])
+            self.camera_path = os.path.join(self.output_path, "camera")
             self.depth_path = os.path.join(self.output_path, "depth")
-            self.filtered_depth_path = os.path.join(self.output_path, "filtered_depth")
             self.conf_path = os.path.join(self.output_path, "conf")
-            self.rgb_path = os.path.join(self.output_path, "rgb")
-            self.laplacian_path = os.path.join(self.output_path, "laplacian")
-            self.reprojection_path = os.path.join(self.output_path, "reprojection")
+            self.image_path = os.path.join(self.output_path, "image")
             self.vis_path = os.path.join(self.output_path, "visuals")
             os.makedirs(self.output_path, exist_ok=True)
+            os.makedirs(self.camera_path, exist_ok=True)
             os.makedirs(self.depth_path, exist_ok=True)
-            os.makedirs(self.filtered_depth_path, exist_ok=True)
             os.makedirs(self.conf_path, exist_ok=True)
-            os.makedirs(self.rgb_path, exist_ok=True)
-            os.makedirs(self.laplacian_path, exist_ok=True)
-            os.makedirs(self.reprojection_path, exist_ok=True)
+            os.makedirs(self.image_path, exist_ok=True)
             os.makedirs(self.vis_path, exist_ok=True)
             self.batch_size = 1
         else:
@@ -105,8 +102,13 @@ class BasePipeline():
             cv2.imwrite(depth_filename, (depth_map * 255))
             # save image
             ref_image = (torch.movedim(data["images"][0,0], (0,1,2), (2,0,1)).detach().cpu().numpy()+0.5) * 255
-            img_filename = os.path.join(self.rgb_path, f"{sample_ind:08d}.png")
+            img_filename = os.path.join(self.image_path, f"{sample_ind:08d}.png")
             cv2.imwrite(img_filename, ref_image[:,:,::-1])
+            # save camera
+            intrinsics = data["K"][0].detach().cpu().numpy()
+            extrinsics = data["poses"][0,0].detach().cpu().numpy()
+            cam_filename = os.path.join(self.camera_path, f"{sample_ind:08d}_cam.txt")
+            write_cam_sfm(cam_filename, intrinsics, extrinsics)
 
     def build_dataset(self):
         if (self.mode=="training"):

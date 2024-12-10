@@ -65,7 +65,7 @@ class Pipeline(BasePipeline):
     def run(self, mode, epoch):
         torch.cuda.reset_peak_memory_stats(device=self.device)
         if mode == "inference":
-            self.mvs_model.eval()
+            self.model.eval()
             visualize = self.cfg["inference"]["visualize"]
             vis_freq = self.cfg["inference"]["vis_freq"]
             vis_path = self.vis_path
@@ -73,10 +73,10 @@ class Pipeline(BasePipeline):
             title_suffix = ""
         else:
             if mode == "training":
-                self.mvs_model.train()
+                self.model.train()
                 data_loader = self.training_data_loader
             elif mode == "validation":
-                self.mvs_model.eval()
+                self.model.eval()
                 data_loader = self.validation_data_loader
             visualize = self.cfg["training"]["visualize"]
             vis_freq = self.cfg["training"]["vis_freq"]
@@ -94,7 +94,7 @@ class Pipeline(BasePipeline):
                 to_gpu(data, self.device)
 
                 # Run network forward pass
-                output = self.mvs_model(data)
+                output = self.model(data)
 
                 if mode != "inference":
                     # Compute loss
@@ -104,8 +104,8 @@ class Pipeline(BasePipeline):
                     if mode != "validation":
                         self.mvs_optimizer.zero_grad(set_to_none=True)
                         loss["total"].backward()
-                        torch.nn.utils.clip_grad_norm_(self.mvs_model.parameters(), self.cfg["training"]["grad_clip"])
-                        self.mvs_optimizer.step()
+                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg["training"]["grad_clip"])
+                        self.optimizer.step()
 
                     # Compute output statistics
                     stats = self.compute_stats(data, output)
@@ -131,7 +131,7 @@ class Pipeline(BasePipeline):
                     self.logger.add_scalar(f"{mode} - Max Memory", float(max_mem), iteration)
                 else:
                     # Store network output
-                    self.save_output(data, output, mode, batch_ind, epoch)
+                    self.save_output(data, output, int(data["ref_id"][0]))
 
                 ## Visualization
                 if (visualize and batch_ind % vis_freq == 0):

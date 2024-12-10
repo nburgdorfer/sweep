@@ -3,10 +3,10 @@ import numpy as np
 
 from cvt.common import set_random_seed
 from cvt.visualization.util import print_csv, to_normal
+from cvt.filtering import consensus_filter
 
 from src.evaluation.eval_2d import eval_2d
 from src.evaluation.eval_3d import dtu_point_eval
-from src.tools.consensus_filtering import consensus_filter
 from src.config import load_config, get_argparser
 
 parser = get_argparser()
@@ -56,7 +56,7 @@ for i, scene in enumerate(scenes):
     paths = {
             "depth": pipeline.depth_path,
             "confidence":pipeline.conf_path,
-            "rgb": pipeline.rgb_path}
+            "rgb": pipeline.image_path}
     mae, auc, percentages = eval_2d(paths, pipeline.inference_dataset, pipeline.vis_path, scale=False)
     avg_mae[i] = mae
     avg_auc[i] = auc
@@ -64,7 +64,7 @@ for i, scene in enumerate(scenes):
 
     #### 3D EVALUATION ####
     print("\n---Evaluating point cloud---")
-    consensus_filter(cfg, pipeline.depth_path, pipeline.conf_path, pipeline.rgb_path, pipeline.filtered_depth_path, pipeline.output_path, pipeline.inference_dataset, scene)
+    consensus_filter(cfg, pipeline.depth_path, pipeline.conf_path, pipeline.image_path, pipeline.output_path, pipeline.inference_dataset, scene)
     to_normal(os.path.join(pipeline.output_path, f"{scene}.ply"), os.path.join(pipeline.output_path, f"{scene}_normal.ply"))
     acc, comp, prec, rec, fscore = dtu_point_eval(cfg, scene, method=ARGS.model)
     avg_acc[i] = acc

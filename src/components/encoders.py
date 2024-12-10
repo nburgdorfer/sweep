@@ -17,26 +17,26 @@ class BasicEncoder(nn.Module):
         self.decode = decode
 
         # H x W
-        conv0 = [Conv2d(in_channels=in_channels, out_channels=c, kernel_size=3, padding=1, normalization="group")]
-        conv0.append(Conv2d(in_channels=c, out_channels=c, kernel_size=3, padding=1, normalization="group"))
+        conv0 = [Conv2d(in_channels=in_channels, out_channels=c, kernel_size=3, padding=1, normalization="batch")]
+        conv0.append(Conv2d(in_channels=c, out_channels=c, kernel_size=3, padding=1, normalization="batch"))
         self.conv0 = nn.Sequential(*nn.ModuleList(conv0))
 
         # H/2 x W/2
-        conv1 = [Conv2d(in_channels=c, out_channels=c*2, kernel_size=5, stride=2, padding=2, normalization="group")]
-        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1, normalization="group"))
-        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1, normalization="group"))
+        conv1 = [Conv2d(in_channels=c, out_channels=c*2, kernel_size=5, stride=2, padding=2, normalization="batch")]
+        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1, normalization="batch"))
+        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1, normalization="batch"))
         self.conv1 = nn.Sequential(*nn.ModuleList(conv1))
 
         # H/4 x W/4
-        conv2 = [Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=5, stride=2, padding=2, normalization="group")]
-        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1, normalization="group"))
-        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1, normalization="group"))
+        conv2 = [Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=5, stride=2, padding=2, normalization="batch")]
+        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1, normalization="batch"))
+        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1, normalization="batch"))
         self.conv2 = nn.Sequential(*nn.ModuleList(conv2))
 
         if self.decode:
-            self.conv3 = Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=3, padding=1, normalization="group")
-            self.conv4 = Conv2d(in_channels=c, out_channels=c*2, kernel_size=3, padding=1, normalization="group")
-            self.out1 = Conv2d(in_channels=c*4, out_channels=c*2, kernel_size=1, padding=0, normalization="group")
+            self.conv3 = Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=3, padding=1, normalization="batch")
+            self.conv4 = Conv2d(in_channels=c, out_channels=c*2, kernel_size=3, padding=1, normalization="batch")
+            self.out1 = Conv2d(in_channels=c*4, out_channels=c*2, kernel_size=1, padding=0, normalization="batch")
             self.out2 = Conv2d(in_channels=c*2, out_channels=out_channels, kernel_size=1, padding=0, normalization="none", nonlinearity="none")
         else:
             self.out1 = Conv2d(in_channels=c*4, out_channels=out_channels, kernel_size=1, padding=0, normalization="none", nonlinearity="none")

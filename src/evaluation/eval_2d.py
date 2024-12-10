@@ -121,33 +121,6 @@ def depth_fscore(est_depth_path, est_conf_path, dataset, th=2.0):
         
     return precision.mean(axis=0), recall.mean(axis=0), fscore.mean(axis=0)
 
-#def depth_fscore(est_depth_path, est_conf_path, dataset, file_ext):
-#    # get depth map filenames
-#    est_depth_files = os.listdir(est_depth_path)
-#    est_depth_files = [edf for edf in est_depth_files if edf[-(len(file_ext)):] == file_ext ]
-#    est_depth_files.sort()
-#
-#    # load target depth maps
-#    target_depths = dataset.get_all_depths()
-#
-#    acc = np.zeros((len(est_depth_files)), dtype=np.float32)
-#    comp = np.zeros((len(est_depth_files)), dtype=np.float32)
-#    for i, edf in enumerate(est_depth_files):
-#        ref_ind = int(edf[:8])
-#        est_depth = torch.tensor(read_pfm(os.path.join(est_depth_path, edf)))
-#        target_depth = target_depths[ref_ind]
-#
-#        est_mask = torch.where(est_depth > 0, 1, 0)
-#        gt_mask = torch.where(target_depth > 0, 1, 0)
-#        
-#        # compute accuracy and completeness
-#        acc[i] = (torch.abs(est_depth - target_depth) * (est_mask*gt_mask)).mean()
-#        comp[i] = (torch.abs(est_depth - target_depth) * gt_mask).mean()
-#
-#    acc = acc.mean()
-#    comp = comp.mean()
-#
-#    return acc, comp
 
 def eval_2d(paths, dataset, vis_path=None, scale=True):
     # threshold values used for depth error pixel percentages
@@ -170,11 +143,6 @@ def eval_2d(paths, dataset, vis_path=None, scale=True):
         ref_ind = int(edf[:8])
         maps["est_depth"] = torch.tensor(read_pfm(os.path.join(paths["depth"], edf)))
         maps["est_conf"] = torch.tensor(read_pfm(os.path.join(paths["confidence"], f"{ref_ind:08d}.pfm")))
-        #   for v in range(re_files):
-        #       maps[f"reproj_error_{v}"] = torch.tensor(read_pfm(os.path.join(paths["reprojection"], f"{ref_ind:08d}_{v}.pfm")))
-        maps["reproj_error_sum"] = torch.tensor(read_pfm(os.path.join(paths["reprojection"], f"{ref_ind:08d}_sum.pfm")))
-        maps["image_laplacian"] = torch.tensor(read_pfm(os.path.join(paths["laplacian"], f"{ref_ind:08d}_image.pfm")))
-        maps["depth_laplacian"] = torch.tensor(read_pfm(os.path.join(paths["laplacian"], f"{ref_ind:08d}_depth.pfm")))
         maps["target_depth"] = torch.tensor(target_depths[ref_ind])[0]
         mask = torch.where(maps["target_depth"] > 0, 1, 0)
         
@@ -205,23 +173,16 @@ def auc_score(maps, re_files, ref_ind, mask, vis_path):
     est_depth = maps["est_depth"]
     est_conf = maps["est_conf"]
     target_depth = maps["target_depth"]
-    image_laplacian = (1-maps["image_laplacian"])
-    depth_laplacian = maps["depth_laplacian"]
-    lap = depth_laplacian+image_laplacian
 
     inds = torch.where(mask==1)
     target_depth = target_depth[inds].cpu().numpy()
     est_depth = est_depth[inds].cpu().numpy()
     est_conf = est_conf[inds].cpu().numpy()
-    depth_laplacian = depth_laplacian[inds].cpu().numpy()
-    re_sum = maps["reproj_error_sum"][inds].cpu().numpy()
 
     # flatten to 1D tensor
     target_depth = target_depth.flatten()
     est_depth = est_depth.flatten()
     est_conf = est_conf.flatten()
-    depth_laplacian = depth_laplacian.flatten()
-    re_sum = re_sum.flatten()
 
     # compute error
     error = np.abs(est_depth - target_depth)
@@ -235,39 +196,22 @@ def auc_score(maps, re_files, ref_ind, mask, vis_path):
     est_indices_conf = est_indices_conf[::-1]
     est_error_conf = np.take(error, indices=est_indices_conf, axis=0)
 
-    # sort all tensors by RE sum
-    est_indices_dl = np.argsort(depth_laplacian)
-    est_error_dl = np.take(error, indices=est_indices_dl, axis=0)
-
-    # sort all tensors by RE sum
-    est_indices_re_sum = np.argsort(re_sum)
-    est_error_re_sum = np.take(error, indices=est_indices_re_sum, axis=0)
-
     # build density vector
     perc = np.array(list(range(5,105,5)))
     density = np.array((perc/100) * (pixel_count), dtype=np.int32)
 
     oracle_roc = np.zeros(density.shape)
     est_roc_conf = np.zeros(density.shape)
-    est_roc_dl = np.zeros(density.shape)
-    #   est_roc_re = np.zeros((re_files, density.shape[0]))
-    est_roc_re_sum = np.zeros(density.shape)
     for i,k in enumerate(density):
         oe = oracle_error[:k]
         ee_conf = est_error_conf[:k]
-        ee_dl = est_error_dl[:k]
-        ee_re_sum = est_error_re_sum[:k]
 
         if (oe.shape[0] == 0):
             oracle_roc[i] = 0.0
             est_roc_conf[i] = 0.0
-            est_roc_dl[i] = 0.0
-            est_roc_re_sum[i] = 0.0
         else:
             oracle_roc[i] = np.mean(oe)
             est_roc_conf[i] = np.mean(ee_conf)
-            est_roc_dl[i] = np.mean(ee_dl)
-            est_roc_re_sum[i] = np.mean(ee_re_sum)
 
     # comput AUC
     oracle_auc = np.trapz(oracle_roc, dx=1)
@@ -277,8 +221,6 @@ def auc_score(maps, re_files, ref_ind, mask, vis_path):
         # plot ROC density errors
         plt.plot(perc, oracle_roc, label="Oracle")
         plt.plot(perc, est_roc_conf, label="Confidence")
-        plt.plot(perc, est_roc_dl, label="Depth Laplacian")
-        plt.plot(perc, est_roc_re_sum, label="Reproj. Error Sum")
         plt.title("ROC Error")
         plt.xlabel("density")
         plt.ylabel("absolte error")
