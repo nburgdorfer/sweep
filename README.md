@@ -16,6 +16,9 @@ We are currently supporting the following network architectures:
 We are currently supporting the following datasets (see 'Data Preparation' for downloading each dataset):
 -  DTU | [website](http://roboimagedata.compute.dtu.dk/?page_id=36)
 -  Tanks & Temples | [website](https://www.tanksandtemples.org/)
+
+### Association
+![Stevens Computer Vision Lab logo](https://github.com/nburgdorfer/mvstudio/blob/main/assets/scvl.png?raw=true)
 </details>
 
 ## Installation
