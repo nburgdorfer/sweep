@@ -145,3 +145,11 @@ Run the inference script with the desired arguments as show above.
 
 These bash scripts will run the `inference.py` python script with the appropriate config file and dataset tag. The scenes that will be processed are the ones listed in the file `configs/<NETWORK>/<DATASET>/scene_lists/inference.txt`. The format for this file is one scene per line (case-sensitive) (NOTE: empty lines will be counted as a scene. Please remove them before running the scripts). For the DTU dataset, the `inference.py` script automatically evaluates all point clouds output from our system following our dense evaluation script.
 </details>
+
+## Results
+<details open>
+<summary></summary>
+  
+![DTU Results](https://github.com/nburgdorfer/mvstudio/blob/main/assets/dtu_results.png?raw=true)
+
+</details>
