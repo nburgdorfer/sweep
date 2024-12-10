@@ -17,20 +17,6 @@ We are currently supporting the following datasets (see 'Data Preparation' for d
 -  DTU | [website](http://roboimagedata.compute.dtu.dk/?page_id=36)
 -  Tanks & Temples | [website](https://www.tanksandtemples.org/)
 
-### Association
-<p align="left">
-    <a href="https://www.stevens.edu/school-engineering-science/departments/computer-science/other-department-laboratories">
-        <!-- pypi-strip -->
-        <picture>
-<!--         <source media="(prefers-color-scheme: dark)" srcset="assets/scvl_dark.png">
-        <source media="(prefers-color-scheme: light)" srcset="assets/scvl_light.png"> -->
-        <!-- /pypi-strip -->
-        <img alt="SCVL" src="assets/scvl.png" width="300">
-        <!-- pypi-strip -->
-        </picture>
-        <!-- /pypi-strip -->
-    </a>
-  </p>
 </details>
 
 ## Installation
