@@ -35,7 +35,7 @@ point_cloud:
   image_region_th: 2
   depth_region_th: 2
   pix_th: 0.35
-  prob_th: 0.95
+  prob_th: 0.85
   num_consistent: 3
   mask_th: 20
   max_dist: 0.5
