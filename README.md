@@ -1,4 +1,4 @@
-# MVS-Studio: A Collection and Unification of Several Deep Multi-View Stereo Networks
+# MVStudio: A Modular Library for Deep Multi-View Stereo Networks.
 
 ## About
 <details open>
