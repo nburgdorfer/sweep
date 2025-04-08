@@ -24,14 +24,14 @@ We are currently supporting the following datasets (see 'Data Preparation' for d
 <summary></summary>
   
 ### Conda Environment
-For our environment setup, we use [conda](https://www.anaconda.com/download/). Please install conda and run the following command:
+For our virtual environment, we use [conda](https://www.anaconda.com/download/). Please install conda and run the following command:
 ```bash
-conda create -n mvs_studio python=3.9
+conda create -n sweep python=3.12
 ```
 
 Once created, activate the environment:
 ```bash
-conda activate mvs_studio
+conda activate sweep
 ```
 
 ### Python Dependancies
