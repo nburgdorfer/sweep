@@ -45,22 +45,17 @@ This project uses [PyTorch](https://pytorch.org/) (currently supporting v2.6.0+c
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 ```
 
-Please install [PyTorch3D](https://github.com/facebookresearch/pytorch3d) (currently supporting v0.7.6):
+Please install [PyTorch3D](https://github.com/facebookresearch/pytorch3d) (currently supporting v0.7.8):
 ```bash
-pip install git+https://github.com/facebookresearch/pytorch3d.git
+pip install --upgrade git+https://github.com/facebookresearch/pytorch3d.git
 ```
 
-Followed by [Tiny-Cuda-NN](https://github.com/NVlabs/tiny-cuda-nn) (currently supporting v1.7):
-```bash
-pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
-```
-
-Lastly, please install [TorchSparse](https://github.com/mit-han-lab/torchsparse) (currently supporting v1.4.0):
+Lastly, please install [TorchSparse](https://github.com/mit-han-lab/torchsparse) (currently supporting v2.1.0):
 ```bash
 sudo apt-get install libsparsehash-dev
 ```
 ```bash
-pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git@v1.4.0
+pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git
 ```
 </details>
 
