@@ -1,4 +1,4 @@
-# MVStudio: A Modular Library for Deep Multi-View Stereo Networks.
+# Sweep: A Modular Library for Deep Multi-View Stereo Networks.
 
 ## About
 <details open>
