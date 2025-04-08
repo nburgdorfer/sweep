@@ -8,8 +8,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from cvt.io import read_pfm
-from cvt.metrics import MAE
+from cvtkit.io import read_pfm
+from cvtkit.metrics import MAE
 
 def projection_eval(est_depth_path, est_conf_path, dataset):
     all_depth_files = os.listdir(est_depth_path)

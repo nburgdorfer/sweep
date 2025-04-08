@@ -3,10 +3,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from cvt.geometry import uniform_hypothesis, homography_warp_var
-from cvt.common import top_k_hypothesis_selection
-from cvt.camera import scale_intrinsic
-from cvt.io import load_ckpt
+from cvtkit.geometry import uniform_hypothesis, homography_warp_var
+from cvtkit.common import top_k_hypothesis_selection
+from cvtkit.camera import scale_intrinsic
+from cvtkit.io import load_ckpt
 
 from src.components.encoders import BasicEncoder
 from src.components.refiners import BasicRefiner

@@ -7,8 +7,9 @@ import sys
 import json
 from tqdm import tqdm
 import yaml
-from cvt.camera import scale_cam
-from cvt.io import read_single_cam_sfm, read_pfm, read_cluster_list
+
+from cvtkit.camera import scale_cam
+from cvtkit.io import read_single_cam_sfm, read_pfm, read_cluster_list
 
 from src.datasets.BaseDataset import BaseDataset
 

@@ -26,4 +26,3 @@ tensorboard==2.19.0
 tensorboard-data-server==0.7.2
 tqdm==4.67.1
 trimesh==4.6.6
-twine==6.1.0

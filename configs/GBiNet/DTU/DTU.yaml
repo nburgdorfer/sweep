@@ -1,4 +1,4 @@
-data_path: /home/nate/data/DTU
+data_path: /mnt/Drive2/DTU/
 output_path: /mnt/Drive1/Results/DTU/GBiNet/
 device: cuda:0
 seed: 43
@@ -14,7 +14,7 @@ camera:
     baseline_mode: min
 
 inference:
-    ckpt_file: pretrained_models/GBiNet/DTU/model.pt
+    ckpt_file: pretrained_models/model_GBiNet_DTU.pt
     frame_spacing: 1
     num_frame: 5
     sample_mode: cluster

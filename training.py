@@ -1,6 +1,6 @@
 import os,sys
 
-from cvt.common import set_random_seed
+from cvtkit.common import set_random_seed
 from src.config import load_config, load_scene_list, get_argparser
 
 parser = get_argparser()

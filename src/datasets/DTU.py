@@ -7,8 +7,8 @@ import sys
 import json
 from tqdm import tqdm
 import yaml
-from cvt.camera import scale_cam
-from cvt.io import read_single_cam_sfm, read_pfm, read_cluster_list
+
+from cvtkit.io import read_single_cam_sfm, read_pfm, read_cluster_list
 
 from src.datasets.BaseDataset import BaseDataset
 
@@ -20,7 +20,7 @@ class DTU(BaseDataset):
             self.gt_depth_path = os.path.join(self.data_path, "Depths", scenes[0])
 
     def get_frame_count(self, scene):
-        image_files = os.listdir(os.path.join(self.data_path, "Images", scene))
+        image_files = os.listdir(os.path.join(self.data_path, "Images", "Lighting", scene))
         image_files = [img for img in image_files if img[-4:]==".png"]
         return len(image_files)
 

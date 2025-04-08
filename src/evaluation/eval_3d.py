@@ -11,9 +11,8 @@ import scipy.io as sio
 from sklearn.neighbors import KDTree
 from tqdm import tqdm
 
-from cvt.io import read_point_cloud, write_point_cloud
-from cvt.geometry import downsample_cloud
-from cvt.common import round_nearest
+from cvtkit.io import read_point_cloud, write_point_cloud
+from cvtkit.common import round_nearest
 
 seed(5)
 np.random.seed(5)
@@ -240,8 +239,7 @@ def dtu_point_eval(cfg, scan, method):
     est_ply_filename = f"{scan}.ply"
     est_ply_path = os.path.join(output_path, scan, est_ply_filename)
     est_ply = read_point_cloud(est_ply_path)
-    est_ply = downsample_cloud(est_ply, 0.3)
-    est_ply = downsample_cloud(est_ply, min_point_dist)
+    est_ply = est_ply.voxel_down_sample(min_point_dist)
 
     gt_ply_filename = "stl{:03d}_total.ply".format(scan_num)
     gt_ply_path = os.path.join(eval_data_path, "Points", f"stl_{resolution}", gt_ply_filename)

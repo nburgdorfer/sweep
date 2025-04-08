@@ -3,10 +3,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from cvt.geometry import uniform_hypothesis, homography_warp
-from cvt.common import top_k_hypothesis_selection, laplacian_pyramid
-from cvt.camera import intrinsic_pyramid
-from cvt.io import load_ckpt
+from cvtkit.geometry import uniform_hypothesis, homography_warp
+from cvtkit.common import top_k_hypothesis_selection, laplacian_pyramid
+from cvtkit.camera import intrinsic_pyramid
+from cvtkit.io import load_ckpt
 
 from src.components.encoders import FPN_large
 from src.components.regularizers import DenseCostReg, SparseCostReg, ViewWeightAgg

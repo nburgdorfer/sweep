@@ -6,19 +6,15 @@ import torch.utils.data as data
 import cv2
 import sys
 
-from cvt.io import read_pfm
-from cvt.camera import compute_baselines, _intrinsic_pyramid, scale_cam, crop_cam
-from cvt.common import _build_depth_pyramid, _normalize_image, crop_image
+from cvtkit.io import read_pfm
+from cvtkit.camera import compute_baselines_, intrinsic_pyramid_, scale_intrinsics_, crop_intrinsics_
+from cvtkit.common import _build_depth_pyramid, _normalize_image, crop_image
 
 def build_dataset(cfg, mode, scenes):
     if cfg["dataset"] == 'TNT':
         from src.datasets.TNT import TNT as Dataset
-    elif cfg["dataset"] == 'ScanNet':
-        from src.datasets.ScanNet import ScanNet as Dataset
     elif cfg["dataset"] == 'DTU':
         from src.datasets.DTU import DTU as Dataset
-    elif cfg["dataset"] == 'Replica':
-        from src.datasets.Replica import Replica as Dataset
     else:
         raise Exception(f"Unknown Dataset {self.cfg['dataset']}")
 
@@ -123,9 +119,9 @@ class BaseDataset(data.Dataset):
         if self.random_crop:
             crop_row = np.random.randint(0, (self.cfg["camera"]["height"] - self.crop_h) - self.H)
             crop_col = np.random.randint(0, (self.cfg["camera"]["width"]- self.crop_w) - self.W)
-            K = crop_cam(K, crop_row, crop_col)
+            K = crop_intrinsics_(K, crop_row, crop_col)
         else:
-            K = scale_cam(K, scale=self.scale)
+            K = scale_intrinsics_(K, scale=self.scale)
 
         images = [None]*self.num_frame
         poses = [None]*self.num_frame
@@ -139,13 +135,15 @@ class BaseDataset(data.Dataset):
 
             if self.random_crop:
                 images[i] = crop_image(images[i], crop_row, crop_col, self.scale)
+
+                images[i] = images[i][(self.crop_h//2):h-(self.crop_h//2),(self.crop_w//2):w-(self.crop_w//2), :]
                 target_depths[i] = crop_image(target_depths[i], crop_row, crop_col, self.scale)
         images = np.asarray(images, dtype=np.float32)
         poses = np.asarray(poses, dtype=np.float32)
         target_depths = np.asarray(target_depths, dtype=np.float32)
 
         # compute min and max camera baselines
-        min_baseline, max_baseline = compute_baselines(poses)
+        min_baseline, max_baseline = compute_baselines_(poses)
 
         # load data dict
         data = {}

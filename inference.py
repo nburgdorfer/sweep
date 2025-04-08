@@ -1,9 +1,9 @@
 import os, sys
 import numpy as np
 
-from cvt.common import set_random_seed
-from cvt.visualization.util import print_csv, to_normal
-from cvt.filtering import consensus_filter
+from cvtkit.common import set_random_seed
+from cvtkit.visualization.util import print_csv, to_normal
+from cvtkit.filtering import consensus_filter
 
 from src.evaluation.eval_2d import eval_2d
 from src.evaluation.eval_3d import dtu_point_eval

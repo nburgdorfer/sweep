@@ -16,8 +16,8 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from cvt.common import parameters_count, print_gpu_mem, to_gpu
-from cvt.io import load_pretrained_model, write_pfm, load_ckpt, save_ckpt, write_cam_sfm
+from cvtkit.common import parameters_count, print_gpu_mem, to_gpu
+from cvtkit.io import load_pretrained_model, write_pfm, load_ckpt, save_ckpt, write_cam_sfm
 
 ## Custom libraries
 from src.config import save_config
