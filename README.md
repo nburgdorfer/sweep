@@ -40,9 +40,9 @@ With the conda environment activated, install the python dependencies:
 pip install -r requirements.txt --user
 ```
 
-This project uses [PyTorch](https://pytorch.org/) (currently supporting v2.2.2+cu118), please install the latest version:
+This project uses [PyTorch](https://pytorch.org/) (currently supporting v2.6.0+cu126), please install the latest version:
 ```bash
-pip install torch==2.2.2+cu118 torchvision==0.17.2+cu118 torchaudio==2.2.2+cu118 --index-url https://download.pytorch.org/whl/cu118
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 ```
 
 Please install [PyTorch3D](https://github.com/facebookresearch/pytorch3d) (currently supporting v0.7.6):
