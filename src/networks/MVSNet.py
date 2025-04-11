@@ -38,7 +38,7 @@ class Network(nn.Module):
 
     def forward(self, data):
         images =  data["images"]
-        intrinsics = scale_intrinsics_(data["K"], s=3).unsqueeze(1).repeat(1,images.shape[1],1,1)
+        intrinsics = scale_intrinsics_(data["K"], scale=3).unsqueeze(1).repeat(1,images.shape[1],1,1)
         extrinsics = data["poses"]
 
         # Extract features
