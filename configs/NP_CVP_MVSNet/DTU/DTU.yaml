@@ -1,4 +1,4 @@
-data_path: /home/nate/data/DTU
+data_path: /mnt/Drive2/DTU
 output_path: /mnt/Drive1/Results/DTU/NP_CVP_MVSNet/
 device: cuda:0
 seed: 43
@@ -14,7 +14,7 @@ camera:
     baseline_mode: min
 
 inference:
-    ckpt_file: pretrained_models/NP_CVP_MVSNet/DTU/model.pt
+    ckpt_file: pretrained_models/model_NPCVP_DTU.pt
     depth_planes: [96,32,16,8] # coarse -> fine
     frame_spacing: 1
     num_frame: 5
