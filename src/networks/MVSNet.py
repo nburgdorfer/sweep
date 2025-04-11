@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from cvtkit.geometry import uniform_hypothesis, homography_warp_var
 from cvtkit.common import top_k_hypothesis_selection
-from cvtkit.camera import scale_intrinsics_
+from cvtkit.camera import scale_intrinsics
 from cvtkit.io import load_ckpt
 
 from src.components.encoders import BasicEncoder
@@ -38,7 +38,7 @@ class Network(nn.Module):
 
     def forward(self, data):
         images =  data["images"]
-        intrinsics = scale_intrinsics_(data["K"], scale=3).unsqueeze(1).repeat(1,images.shape[1],1,1)
+        intrinsics = scale_intrinsics(data["K"], scale=3).unsqueeze(1).repeat(1,images.shape[1],1,1)
         extrinsics = data["poses"]
 
         # Extract features
