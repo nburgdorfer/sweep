@@ -1,8 +1,8 @@
-data_path: /home/nate/data/DTU
+data_path: /mnt/Drive2/DTU
 output_path: /mnt/Drive1/Results/DTU/MVSNet/
 device: cuda:0
 seed: 43
-num_workers: 12
+num_workers: 4
 
 camera:
     height: 1200
@@ -14,7 +14,7 @@ camera:
     baseline_mode: min
 
 inference:
-    ckpt_file: pretrained_models/MVSNet/DTU/model.pt
+    ckpt_file: pretrained_models/model_MVSNet_DTU.pt
     depth_planes: 256
     frame_spacing: 1
     num_frame: 5
