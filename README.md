@@ -131,11 +131,7 @@ Please leave this key blank (or comment out the path) if you do not wish to cont
 <details open>
 <summary></summary>
   
-We provide pretrained models for all methods:
-- Trained on DTU
-  - [MVSNet](https://stevens0-my.sharepoint.com/:f:/g/personal/nburgdor_stevens_edu/EpvpLPT9qMxOh3mbq5CYU4EBIcqLRH73TCu9gPnuuhKLIQ?e=gCOXCF)
-  - [NP-CVP-MVSNet](https://stevens0-my.sharepoint.com/:f:/g/personal/nburgdor_stevens_edu/ErMJUQi9-9RAj7frhp9tXUEBMMko4rP1jgANXmu8AuSUxQ?e=YHxyc8)
-  - [GBiNet](https://stevens0-my.sharepoint.com/:f:/g/personal/nburgdor_stevens_edu/EgriI5e8PNtKlITrrtNsQB4B1fcdDIl5_7fmlKYiDGvGhw?e=zX6sgG)
+We provide [pretrained models](https://huggingface.co/nburgdorfer/sweep) for all methods.
 
 Run the inference script with the desired arguments as show above.
 
