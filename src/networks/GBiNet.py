@@ -1,14 +1,10 @@
-import os,sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from cvtkit.geometry import uniform_hypothesis, homography_warp
-from cvtkit.common import top_k_hypothesis_selection, laplacian_pyramid
-from cvtkit.camera import intrinsic_pyramid
-from cvtkit.io import load_ckpt
 
-from src.components.encoders import FPN_small
+from src.components.encoders import FPN
 from src.components.regularizers import CostRegNet, PixelwiseNet
 
 class Network(nn.Module):
@@ -27,7 +23,14 @@ class Network(nn.Module):
         self.height, self.width = self.cfg["H"], self.cfg["W"]
 
         #### Image Feature Encoder
-        self.feature_encoder = FPN_small(3, 8, self.feature_channels)
+        self.feature_encoder = FPN(
+                        in_channels=3,
+                        out_channels=self.feature_channels,
+                        base_channels=8,
+                        block_size=3,
+                        levels=4,
+                        out_levels=4
+                    )
 
         #### Cost Volume Regularizers
         self.cost_reg = nn.ModuleList([CostRegNet(self.group_channels[i], 8) for i in range(self.resolution_levels)])

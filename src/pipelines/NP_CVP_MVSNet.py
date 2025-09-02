@@ -156,7 +156,7 @@ class Pipeline(BasePipeline):
                     }
 
 
-        with tqdm(data_loader, desc=f"MVS-Studio {title_suffix}", unit="batch") as loader:
+        with tqdm(data_loader, desc=f"NP-CVP-MVSNet {title_suffix}", unit="batch") as loader:
             for batch_ind, data in enumerate(loader):
                 to_gpu(data, self.device)
 

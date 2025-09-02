@@ -1,14 +1,11 @@
-import os,sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from cvtkit.geometry import uniform_hypothesis, homography_warp
 from cvtkit.common import top_k_hypothesis_selection, laplacian_pyramid
-from cvtkit.camera import intrinsic_pyramid
-from cvtkit.io import load_ckpt
 
-from src.components.encoders import FPN_large
+from src.components.encoders import FPN
 from src.components.regularizers import DenseCostReg, SparseCostReg, ViewWeightAgg
 
 class Network(nn.Module):
@@ -28,7 +25,14 @@ class Network(nn.Module):
             self.depth_planes = self.cfg["training"]["depth_planes"]
 
         #### Image Feature Encoder ####
-        self.feature_encoder = FPN_large(3, 8, self.feature_channels)
+        self.feature_encoder = FPN(
+                        in_channels=3,
+                        out_channels=self.feature_channels,
+                        base_channels=8,
+                        block_size=5,
+                        levels=4,
+                        out_levels=4
+                    )
 
         #### Cost Volume Regularizers ####
         regularizer = [DenseCostReg(self.group_channels[0])]

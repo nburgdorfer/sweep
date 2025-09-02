@@ -1,7 +1,5 @@
-import sys, os
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torchsparse import nn as spnn
 from torchsparse import SparseTensor
 
@@ -146,7 +144,6 @@ class SparseCostReg(nn.Module):
 
         self.input = nn.Sequential(
             SparseConv3d(base_ch, base_ch, kernel_size=3),
-            #SparseConv3d(1, base_ch, kernel_size=3),
             SparseConv3d(base_ch, base_ch, kernel_size=3),
             SparseConv3d(base_ch, base_ch, kernel_size=3)
         )

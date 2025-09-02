@@ -23,39 +23,11 @@ We are currently supporting the following datasets (see 'Data Preparation' for d
 <details open>
 <summary></summary>
   
-### Conda Environment
-For our virtual environment, we use [conda](https://www.anaconda.com/download/). Please install conda and run the following command:
+### Virtual Environment (UV)
+To manage this package, we use [uv](https://docs.astral.sh/uv/). Please install uv following the [official docs](https://docs.astral.sh/uv/getting-started/installation/):
+To activate the environment:
 ```bash
-conda create -n sweep python=3.12
-```
-
-Once created, activate the environment:
-```bash
-conda activate sweep
-```
-
-### Python Dependancies
-With the conda environment activated, install the python dependencies:
-```bash
-pip install -r requirements.txt --user
-```
-
-This project uses [PyTorch](https://pytorch.org/) (currently supporting v2.6.0+cu126), please install the latest version:
-```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
-```
-
-Please install [PyTorch3D](https://github.com/facebookresearch/pytorch3d) (currently supporting v0.7.8):
-```bash
-pip install --upgrade git+https://github.com/facebookresearch/pytorch3d.git
-```
-
-Lastly, please install [TorchSparse](https://github.com/mit-han-lab/torchsparse) (currently supporting v2.1.0):
-```bash
-sudo apt-get install libsparsehash-dev
-```
-```bash
-pip install --upgrade git+https://github.com/mit-han-lab/torchsparse.git
+uv sync && source .venv/bin/activate
 ```
 </details>
 

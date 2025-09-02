@@ -76,10 +76,10 @@ class BasePipeline():
     def get_network(self):
         raise NotImplementedError()
 
-    def compute_loss(self):
+    def compute_loss(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def compute_stats(self):
+    def compute_stats(self, *args, **kwargs):
         raise NotImplementedError()
 
     def save_output(self, data, output, sample_ind):

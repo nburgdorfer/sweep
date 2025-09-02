@@ -1,8 +1,6 @@
 boost==0.1
 build==1.2.2.post1
 clang==20.1.0
-cvtkit==0.0.28
-h5py==3.13.0
 imageio==2.37.0
 Jinja2==3.1.6
 Markdown==3.7

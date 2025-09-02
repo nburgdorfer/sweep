@@ -44,7 +44,7 @@ point_cloud:
   resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
-    batch_size: 4
+    batch_size: 1
     ckpt_file: 
     epochs: 30
     frame_spacing: 1

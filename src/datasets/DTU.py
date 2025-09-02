@@ -1,32 +1,30 @@
 import os
-import random
 import numpy as np
-import torch
-import cv2
 import sys
-import json
 from tqdm import tqdm
-import yaml
 
-from cvtkit.io import read_single_cam_sfm, read_pfm, read_cluster_list
+from typing import Any
+from numpy.typing import NDArray
+
+from cvtkit.io import read_single_cam_sfm, read_cluster_list
 
 from src.datasets.BaseDataset import BaseDataset
 
 class DTU(BaseDataset):
-    def __init__(self, cfg, mode, scenes):
+    def __init__(self, cfg: dict[Any,Any], mode: str, scenes: list[str]):
         super(DTU, self).__init__(cfg, mode, scenes)
         self.units = "mm"
         if mode=="inference":
             self.gt_depth_path = os.path.join(self.data_path, "Depths", scenes[0])
 
-    def get_frame_count(self, scene):
+    def get_frame_count(self, scene: str):
         image_files = os.listdir(os.path.join(self.data_path, "Images", "Lighting", scene))
         image_files = [img for img in image_files if img[-4:]==".png"]
         return len(image_files)
 
-    def build_samples(self):
-        self.total_samples = []
-        self.frame_count = 0
+    def build_samples(self) -> tuple[list[dict[str,Any]], int]:
+        total_samples: list[dict[str,Any]] = []
+        frame_count = 0
 
         if self.mode=="inference":
             scenes = self.scenes
@@ -41,20 +39,19 @@ class DTU(BaseDataset):
             # build samples dict for other data
             curr_frame_count = self.get_frame_count(scene)
             if self.sample_mode=="stream":
-                self.total_samples.extend(self.build_samples_stream(scene, curr_frame_count))
+                total_samples.extend(self.build_samples_stream(scene, curr_frame_count))
             elif self.sample_mode=="cluster":
-                self.total_samples.extend(self.build_samples_cluster(scene))
-            self.frame_count += curr_frame_count
+                total_samples.extend(self.build_samples_cluster(scene))
+            frame_count += curr_frame_count
 
             # load pose and intrinsics for current scene
             self.load_intrinsics(scene)
 
-        self.total_samples = np.asarray(self.total_samples)
-        return
+        return (total_samples, frame_count)
 
 
-    def build_samples_stream(self, scene, frame_count):
-        samples = []
+    def build_samples_stream(self, scene: str, frame_count: int) -> list[dict[str, Any]]:
+        samples: list[dict[str,Any]] = []
 
         frame_offset = ((self.num_frame-1)//2)
         radius = frame_offset*self.frame_spacing
@@ -70,9 +67,9 @@ class DTU(BaseDataset):
             frame_inds.extend(bottom)
             frame_inds.insert(0, ref_frame)
 
-            image_files = []
-            depth_files = []
-            pose_files = []
+            image_files: list[str] = []
+            depth_files: list[str] = []
+            pose_files: list[str] = []
             for ind in frame_inds:
                 image_files.append(os.path.join(self.data_path, "Images", scene, f"{ind:08d}.png"))
                 depth_files.append(os.path.join(self.data_path, "Depths", scene, f"{ind:08d}_depth.pfm"))
@@ -91,11 +88,11 @@ class DTU(BaseDataset):
                             })
         return samples
 
-    def get_cluster_file(self, scene):
+    def get_cluster_file(self, scene: str) -> str:
         return os.path.join(self.data_path, "Cameras/pair.txt")
 
-    def build_samples_cluster(self, scene):
-        samples = []
+    def build_samples_cluster(self, scene: str) -> list[dict[str, Any]]:
+        samples: list[dict[str,Any]] = []
         clusters = read_cluster_list(self.get_cluster_file(scene))
 
         for c in clusters:
@@ -107,9 +104,9 @@ class DTU(BaseDataset):
                 src_frames = c[1]
             frame_inds.extend(src_frames[:self.num_frame-1])
 
-            image_files = []
-            depth_files = []
-            pose_files = []
+            image_files: list[str] = []
+            depth_files: list[str] = []
+            pose_files: list[str] = []
             for ind in frame_inds:
                 image_files.append(os.path.join(self.data_path, "Images", scene, f"{ind:08d}.png"))
                 depth_files.append(os.path.join(self.data_path, "Depths", scene, f"{ind:08d}_depth.pfm"))
@@ -129,16 +126,16 @@ class DTU(BaseDataset):
         return samples
 
 
-    def load_intrinsics(self, scene):
+    def load_intrinsics(self, scene: str) -> None:
         cam_file = os.path.join(self.data_path, "Cameras/00000000_cam.txt")
         cam = read_single_cam_sfm(cam_file)
         self.K[scene] = cam[1,:3,:3].astype(np.float32)
         self.K[scene][0,2] -= (self.crop_w//2)
         self.K[scene][1,2] -= (self.crop_h//2)
-        self.H = int(self.scale * (self.cfg["camera"]["height"] - self.crop_h))
-        self.W = int(self.scale * (self.cfg["camera"]["width"]- self.crop_w))
+        self.H: int = int(self.scale * (self.cfg["camera"]["height"] - self.crop_h))
+        self.W: int = int(self.scale * (self.cfg["camera"]["width"]- self.crop_w))
 
-    def get_pose(self, pose_file, frame_id=None):
+    def get_pose(self, pose_file: str) -> NDArray[np.float32]:
         try:
             cam = read_single_cam_sfm(pose_file)
         except:
@@ -149,8 +146,8 @@ class DTU(BaseDataset):
             print(pose, pose_file)
         return pose
 
-    def get_all_poses(self, scene):
-        poses = []
+    def get_all_poses(self) -> list[NDArray[Any]]:
+        poses: list[NDArray[Any]] = []
         pose_path = os.path.join(self.data_path, "Cameras")
         pose_files = os.listdir(pose_path)
         pose_files.sort()
@@ -164,7 +161,7 @@ class DTU(BaseDataset):
             poses.append(pose)
         return poses
 
-    def get_all_depths(self, scale):
+    def get_all_depths(self, scale: bool) -> NDArray[Any]:
         gt_depth_files = os.listdir(self.gt_depth_path)
         gt_depth_files = [os.path.join(self.gt_depth_path, gdf) for gdf in gt_depth_files if os.path.isfile(os.path.join(self.gt_depth_path, gdf))]
         gt_depth_files.sort()

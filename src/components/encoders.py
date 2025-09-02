@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmcv.ops.deform_conv import DeformConv2dPack
 
-from src.components.layers import Conv2d, Deconv2d, Conv3d, Deconv3d
+from src.components.layers import Conv2d, Conv3d, Deconv3d, mlp
 
 class BasicEncoder(nn.Module):
     def __init__(self, in_channels, c, out_channels, decode=False):
@@ -50,116 +49,96 @@ class BasicEncoder(nn.Module):
         return out
 
 
-class FPN_small(nn.Module):
-    def __init__(self, in_channels, c, out_channels):
-        super(FPN_small, self).__init__()
+class FPN(nn.Module):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 base_channels=8,
+                 block_size=4,
+                 levels=4,
+                 out_levels=4,
+                 ):
+        """
+        Args:
+            in_channels: The expected channel size for the input data.
+            out_channels: The channel size for the output features.
+            base_channels: The base hidden channel size inside the encoder.
+            block_size: The number of convolution layers per convolution block.
+            levels: The number of total pyramid layers.
+            out_levels: The expected number of output feature maps.
+        """
+        super(FPN, self).__init__()
 
-        # H x W
-        conv0 = [Conv2d(in_channels=in_channels, out_channels=c, kernel_size=3, padding=1)]
-        conv0.append(Conv2d(in_channels=c, out_channels=c, kernel_size=3, padding=1))
-        self.conv0 = nn.Sequential(*nn.ModuleList(conv0))
+        assert block_size >= 1
+        assert levels >= 1
+        assert out_levels <= levels
 
-        # H/2 x W/2
-        conv1 = [Conv2d(in_channels=c, out_channels=c*2, kernel_size=5, stride=2, padding=2)]
-        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1))
-        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1))
-        self.conv1 = nn.Sequential(*nn.ModuleList(conv1))
+        self.levels = levels
+        self.out_levels = out_levels
 
-        # H/4 x W/4
-        conv2 = [Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=5, stride=2, padding=2)]
-        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1))
-        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1))
-        self.conv2 = nn.Sequential(*nn.ModuleList(conv2))
+        # build hidden channels list
+        hidden_channels = []
+        for l in range(levels):
+            hidden_channels.append(base_channels * (2**l))
 
-        # H/8 x W/8
-        conv3 = [Conv2d(in_channels=c*4, out_channels=c*8, kernel_size=5, stride=2, padding=2)]
-        conv3.append(Conv2d(in_channels=c*8, out_channels=c*8, kernel_size=3, padding=1))
-        conv3.append(Conv2d(in_channels=c*8, out_channels=c*8, kernel_size=3, padding=1))
-        self.conv3 = nn.Sequential(*nn.ModuleList(conv3))
+        ### UP Convolution Layers ###
+        self.up_conv = nn.ModuleList()
+        conv_0 = [Conv2d(in_channels=in_channels, out_channels=hidden_channels[0], kernel_size=5, padding=2)]
+        for _ in range (1, block_size):
+            conv_0.append(Conv2d(in_channels=hidden_channels[0], out_channels=hidden_channels[0], kernel_size=3, padding=1))
+        self.up_conv.append(nn.Sequential(*nn.ModuleList(conv_0)))
+        
+        for l in range(1, levels):
+            conv = [Conv2d(in_channels=hidden_channels[l-1], out_channels=hidden_channels[l], kernel_size=5, stride=2, padding=2)]
+            for _ in range (1, block_size):
+                conv.append(Conv2d(in_channels=hidden_channels[l], out_channels=hidden_channels[l], kernel_size=3, padding=1))
+            self.up_conv.append(nn.Sequential(*nn.ModuleList(conv)))
 
-        # H/4 x W/4
-        self.conv4 = Conv2d(in_channels=c*4, out_channels=c*8, kernel_size=1, padding=0, normalization="none", nonlinearity="none")
-        self.conv5 = Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=1, padding=0, normalization="none", nonlinearity="none")
-        self.conv6 = Conv2d(in_channels=c, out_channels=c*2, kernel_size=1, padding=0, normalization="none", nonlinearity="none")
+        ### Lateral Convolution Layers ###
+        self.lateral_conv = nn.ModuleList()
+        for l in range(levels-1):
+            self.lateral_conv.append(Conv2d(in_channels=hidden_channels[l], out_channels=hidden_channels[l+1], kernel_size=1, padding=0))
+        self.lateral_conv.append(Conv2d(in_channels=hidden_channels[self.levels-1], out_channels=hidden_channels[self.levels-1], kernel_size=1, padding=0))
 
-        # Output
-        self.out0 = DeformConv2dPack(in_channels=c*8, out_channels=out_channels[0], kernel_size=3,stride=1,padding=1,deform_groups=1)
-        self.out1 = DeformConv2dPack(in_channels=c*8, out_channels=out_channels[1], kernel_size=3,stride=1,padding=1,deform_groups=1)
-        self.out2 = DeformConv2dPack(in_channels=c*4, out_channels=out_channels[2], kernel_size=3,stride=1,padding=1,deform_groups=1)
-        self.out3 = DeformConv2dPack(in_channels=c*2, out_channels=out_channels[3], kernel_size=3,stride=1,padding=1,deform_groups=1)
+        ### Down Convolution Layers ###
+        self.down_conv = nn.ModuleList()
+        for l in range(levels-1):
+            conv = [Conv2d(in_channels=hidden_channels[l+1], out_channels=hidden_channels[l], kernel_size=3, padding=1)]
+            for _ in range (1, block_size):
+                conv.append(Conv2d(in_channels=hidden_channels[l], out_channels=hidden_channels[l], kernel_size=3, padding=1))
+            self.down_conv.append(nn.Sequential(*nn.ModuleList(conv)))
 
-    def forward(self, img):
-        z0 = self.conv0(img) # [H x W]
-        z1 = self.conv1(z0) # [H/2 x W/2]
-        z2 = self.conv2(z1) # [H/4 x W/4]
-        z3 = self.conv3(z2) # [H/8 x W/8]
+        ### Output Convolution Layers ###
+        self.out_conv = nn.ModuleList()
+        for l in range(out_levels):
+            self.out_conv.append(
+                Conv2d(
+                    in_channels=hidden_channels[l],
+                    out_channels=out_channels[l],
+                    normalization="none")
+                )
 
-        f0 = self.out0(z3) # [H/8 x W/8]
-        f1 = self.out1(F.interpolate(z3, scale_factor=2, mode="bilinear") + self.conv4(z2)) # [H/4 x W/4]
-        f2 = self.out2(F.interpolate(z2, scale_factor=2, mode="bilinear") + self.conv5(z1)) # [H/2 x W/2]
-        f3 = self.out3(F.interpolate(z1, scale_factor=2, mode="bilinear") + self.conv6(z0)) # [H x W]
+    def forward(self, data):      
+        ### Up and Lateral Convolution ###
+        prev_features = self.up_conv[0](data)
+        lateral_features = []
+        lateral_features.append(self.lateral_conv[0](prev_features))
+        for l in range(1, self.levels):
+            prev_features = self.up_conv[l](prev_features)
+            lateral_features.append(self.lateral_conv[l](prev_features))        
 
-        return (f0, f1, f2, f3)
+        ### Down Convolution ###
+        down_features = [None]*(self.levels)
+        down_features[self.levels-1] = lateral_features[self.levels-1]
+        for l in range(self.levels-1,0,-1):
+            down_features[l-1] = self.down_conv[l-1](F.interpolate(down_features[l], scale_factor=2, mode="bilinear") + lateral_features[l-1])
 
-class FPN_large(nn.Module):
-    def __init__(self, in_channels, c, out_channels):
-        super(FPN_large, self).__init__()
+        ### Out Convolution ###
+        out_features = []
+        for l in range(self.out_levels):
+            out_features.insert(0, self.out_conv[l](down_features[l]))
 
-        # H x W
-        conv0 = [Conv2d(in_channels=in_channels, out_channels=c, kernel_size=3, padding=1)]
-        conv0.append(Conv2d(in_channels=c, out_channels=c, kernel_size=3, padding=1))
-        conv0.append(Conv2d(in_channels=c, out_channels=c, kernel_size=3, padding=1))
-        conv0.append(Conv2d(in_channels=c, out_channels=c, kernel_size=3, padding=1))
-        conv0.append(Conv2d(in_channels=c, out_channels=c, kernel_size=3, padding=1))
-        self.conv0 = nn.Sequential(*nn.ModuleList(conv0))
-
-        # H/2 x W/2
-        conv1 = [Conv2d(in_channels=c, out_channels=c*2, kernel_size=5, stride=2, padding=2)]
-        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1))
-        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1))
-        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1))
-        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1))
-        self.conv1 = nn.Sequential(*nn.ModuleList(conv1))
-
-        # H/4 x W/4
-        conv2 = [Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=5, stride=2, padding=2)]
-        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1))
-        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1))
-        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1))
-        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1))
-        self.conv2 = nn.Sequential(*nn.ModuleList(conv2))
-
-        # H/8 x W/8
-        conv3 = [Conv2d(in_channels=c*4, out_channels=c*8, kernel_size=5, stride=2, padding=2)]
-        conv3.append(Conv2d(in_channels=c*8, out_channels=c*8, kernel_size=3, padding=1))
-        conv3.append(Conv2d(in_channels=c*8, out_channels=c*8, kernel_size=3, padding=1))
-        conv3.append(Conv2d(in_channels=c*8, out_channels=c*8, kernel_size=3, padding=1))
-        conv3.append(Conv2d(in_channels=c*8, out_channels=c*8, kernel_size=3, padding=1))
-        self.conv3 = nn.Sequential(*nn.ModuleList(conv3))
-
-        # H/4 x W/4
-        self.conv4 = Conv2d(in_channels=c*4, out_channels=c*8, kernel_size=1, padding=0, normalization="none", nonlinearity="none")
-        self.conv5 = Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=1, padding=0, normalization="none", nonlinearity="none")
-        self.conv6 = Conv2d(in_channels=c, out_channels=c*2, kernel_size=1, padding=0, normalization="none", nonlinearity="none")
-
-        # Output
-        self.out0 = DeformConv2dPack(in_channels=c*8, out_channels=out_channels[0], kernel_size=3,stride=1,padding=1,deform_groups=1)
-        self.out1 = DeformConv2dPack(in_channels=c*8, out_channels=out_channels[1], kernel_size=3,stride=1,padding=1,deform_groups=1)
-        self.out2 = DeformConv2dPack(in_channels=c*4, out_channels=out_channels[2], kernel_size=3,stride=1,padding=1,deform_groups=1)
-        self.out3 = DeformConv2dPack(in_channels=c*2, out_channels=out_channels[3], kernel_size=3,stride=1,padding=1,deform_groups=1)
-
-    def forward(self, img):
-        z0 = self.conv0(img) # [H x W]
-        z1 = self.conv1(z0) # [H/2 x W/2]
-        z2 = self.conv2(z1) # [H/4 x W/4]
-        z3 = self.conv3(z2) # [H/8 x W/8]
-
-        f0 = self.out0(z3) # [H/8 x W/8]
-        f1 = self.out1(F.interpolate(z3, scale_factor=2, mode="bilinear") + self.conv4(z2)) # [H/4 x W/4]
-        f2 = self.out2(F.interpolate(z2, scale_factor=2, mode="bilinear") + self.conv5(z1)) # [H/2 x W/2]
-        f3 = self.out3(F.interpolate(z1, scale_factor=2, mode="bilinear") + self.conv6(z0)) # [H x W]
-
-        return (f0, f1, f2, f3)
+        return out_features
 
 
 ###### Experimental ######

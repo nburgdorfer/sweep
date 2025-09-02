@@ -1,7 +1,10 @@
 import sys
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchsparse import nn as spnn
+
+from torchvision import ops
 
 #############################################
 # 2D Convolution
@@ -70,6 +73,45 @@ class Deconv2d(nn.Module):
             out = F.relu(out)
 
         return out
+    
+
+# #############################################
+# # 2D Deformable Convolution
+# #############################################
+# class DeformConv2d(nn.Module):
+#     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, normalization="none", nonlinearity="none", group_num=2):
+#         super(DeformConv2d, self).__init__()
+#         self.normalization = normalization
+#         self.nonlinearity = nonlinearity
+
+#         self.conv = ops.DeformConv2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=(normalization=="none"))
+#         self.weights = 
+
+#         if normalization=="batch":
+#             self.norm = nn.BatchNorm2d(out_channels)
+#         elif normalization=="group":
+#             self.norm = nn.GroupNorm(group_num, out_channels)
+#         elif normalization!="none":
+#             print(f"ERROR: Unknown normalization function: '{normalization}'")
+#             sys.exit(-1)
+
+#     def forward(self, x):
+#         out = self.conv(x)
+
+#         if self.normalization != "none":
+#             out = self.norm(out)
+
+#         if self.nonlinearity == "relu":
+#             out = F.relu(out)
+#         elif self.nonlinearity == "leaky_relu":
+#             out = F.leaky_relu(out)
+#         elif self.nonlinearity == "sigmoid":
+#             out = F.sigmoid(out)
+#         elif self.nonlinearity != "none":
+#             print(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
+#             sys.exit()
+
+#         return out
 
 #############################################
 # 3D Convolution

@@ -1,25 +1,10 @@
 # Python libraries
-import cv2
-import json
-import matplotlib.pyplot as plt
-import numpy as np
-import os
-import random
-import shutil
-import sys
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-import torch.optim.lr_scheduler as lr_sched
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from cvtkit.common import to_gpu, laplacian_pyramid, build_labels
-from cvtkit.io import write_pfm
-from cvtkit.geometry import visibility, get_uncovered_mask, edge_mask
-from cvtkit.visualization import visualize_mvs, laplacian_depth_error, laplacian_count, laplacian_uncovered_count, plot_laplacian_matrix
+from cvtkit.common import to_gpu, build_labels
+from cvtkit.visualization import visualize_mvs
 
 ## Custom libraries
 from src.pipelines.BasePipeline import BasePipeline
@@ -50,10 +35,10 @@ class Pipeline(BasePipeline):
         error *= mask
 
         loss["total"] = (error.sum(dim=(1,2)) / (mask.sum(dim=(1,2))+1e-10)).mean() * self.loss_weights[stage_id]
-        loss["cov_percent"] = (mask.sum() / torch.where(target_depth > 0, 1, 0).sum())
+        loss["cov_percent"] = (mask.sum() / (torch.where(target_depth > 0, 1, 0).sum()+1e-10))
         return loss
 
-    def compute_stats(self, data, output, stage_id):
+    def compute_stats(self, data, output):
         with torch.set_grad_enabled((torch.is_grad_enabled and not torch.is_inference_mode_enabled)):
             mae, acc = depth_acc(output["final_depth"][0], data["target_depth"][0])
         stats = {
@@ -70,32 +55,38 @@ class Pipeline(BasePipeline):
             vis_freq = self.cfg["inference"]["vis_freq"]
             vis_path = self.vis_path
             data_loader = self.inference_data_loader
+            dataset = self.inference_dataset
             title_suffix = ""
         else:
             if mode == "training":
                 self.model.train()
                 data_loader = self.training_data_loader
-            elif mode == "validation":
+                dataset = self.training_dataset
+            else:
                 self.model.eval()
                 data_loader = self.validation_data_loader
+                dataset = self.validation_dataset
             visualize = self.cfg["training"]["visualize"]
             vis_freq = self.cfg["training"]["vis_freq"]
             vis_path = self.log_vis
             title_suffix = f" - Epoch {epoch}"
-            sums = {
-                    "loss": 0.0,
-                    "cov_percent": 0.0,
-                    "mae": 0.0,
-                    "acc": 0.0
-                    }
+        sums = {
+                "loss": 0.0,
+                "cov_percent": 0.0,
+                "mae": 0.0,
+                "acc": 0.0
+                }
 
-        with tqdm(data_loader, desc=f"MVS-Studio {mode}{title_suffix}", unit="batch") as loader:
+        with tqdm(data_loader, desc=f"GBiNet {mode}{title_suffix}", unit="batch") as loader:
             for batch_ind, data in enumerate(loader):
                 to_gpu(data, self.device)
                 
                 # build image features
                 data["hypotheses"] = [None]*(len(self.stage_ids))
 
+                confidence = torch.zeros((self.batch_size, 1, dataset.H, dataset.W), dtype=torch.float32, device=self.device)
+                output = {}
+                loss = {}
                 for iteration, stage_id in enumerate(self.stage_ids):
                     if mode == "training":
                         self.optimizer.zero_grad()
@@ -108,7 +99,6 @@ class Pipeline(BasePipeline):
 
                     if iteration==0:
                         data["hypotheses"][iteration] = output["hypotheses"]
-                        confidence = output["confidence"]
                     if iteration < len(self.stage_ids)-1:
                         data["hypotheses"][iteration+1] = output["next_hypotheses"]
                     if iteration <= self.confidence_iterations:
@@ -127,9 +117,10 @@ class Pipeline(BasePipeline):
                 # confidence average
                 output["confidence"] = confidence / self.confidence_iterations
 
+                stats = {}
                 if mode != "inference":
                     # Compute output statistics
-                    stats = self.compute_stats(data, output, stage_id)
+                    stats = self.compute_stats(data, output)
 
                     # Update progress bar
                     sums["loss"] += float(loss["total"].detach().cpu().item())
@@ -165,6 +156,5 @@ class Pipeline(BasePipeline):
                     del loss
                     del output
                     del data
-                    if epoch > 5:
-                        del stats
+                    del stats
                     torch.cuda.empty_cache()
