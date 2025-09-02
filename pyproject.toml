@@ -77,3 +77,7 @@ explicit = true
 [project.urls]
 Homepage = "https://nburgdorfer.github.io/cvtkit/"
 Repository = "https://github.com/nburgdorfer/sweep"
+
+[tool.uv.extra-build-dependencies]
+pytorch3d = ["torch"]
+torchsparse = ["torch"]
