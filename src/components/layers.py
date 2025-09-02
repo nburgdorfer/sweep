@@ -1,10 +1,6 @@
-import sys
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchsparse import nn as spnn
-
-from torchvision import ops
 
 #############################################
 # 2D Convolution
@@ -22,8 +18,7 @@ class Conv2d(nn.Module):
         elif normalization=="group":
             self.norm = nn.GroupNorm(group_num, out_channels)
         elif normalization!="none":
-            print(f"ERROR: Unknown normalization function: '{normalization}'")
-            sys.exit(-1)
+            raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
 
     def forward(self, x):
         out = self.conv(x)
@@ -38,8 +33,7 @@ class Conv2d(nn.Module):
         elif self.nonlinearity == "sigmoid":
             out = F.sigmoid(out)
         elif self.nonlinearity != "none":
-            print(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
-            sys.exit()
+            raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
 
         return out
 
@@ -60,8 +54,7 @@ class Deconv2d(nn.Module):
         elif normalization=="group":
             self.norm = nn.GroupNorm(group_num, out_channels)
         elif normalization!="none":
-            print(f"ERROR: Unknown normalization function: '{normalization}'")
-            sys.exit(-1)
+            raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
 
     def forward(self, x):
         out = self.conv(x)
@@ -69,8 +62,14 @@ class Deconv2d(nn.Module):
         if self.normalization != "none":
             out = self.norm(out)
 
-        if self.nonlinearity != "none":
+        if self.nonlinearity == "relu":
             out = F.relu(out)
+        elif self.nonlinearity == "leaky_relu":
+            out = F.leaky_relu(out)
+        elif self.nonlinearity == "sigmoid":
+            out = F.sigmoid(out)
+        elif self.nonlinearity != "none":
+            raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
 
         return out
     
@@ -92,8 +91,7 @@ class Deconv2d(nn.Module):
 #         elif normalization=="group":
 #             self.norm = nn.GroupNorm(group_num, out_channels)
 #         elif normalization!="none":
-#             print(f"ERROR: Unknown normalization function: '{normalization}'")
-#             sys.exit(-1)
+            # raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
 
 #     def forward(self, x):
 #         out = self.conv(x)
@@ -108,8 +106,7 @@ class Deconv2d(nn.Module):
 #         elif self.nonlinearity == "sigmoid":
 #             out = F.sigmoid(out)
 #         elif self.nonlinearity != "none":
-#             print(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
-#             sys.exit()
+            # raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
 
 #         return out
 
@@ -129,8 +126,7 @@ class Conv3d(nn.Module):
         elif normalization=="group":
             self.norm = nn.GroupNorm(group_num, out_channels)
         elif normalization!="none":
-            print(f"ERROR: Unknown normalization function: '{normalization}'")
-            sys.exit(-1)
+            raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
 
     def forward(self, x):
         out = self.conv(x)
@@ -138,8 +134,14 @@ class Conv3d(nn.Module):
         if self.normalization != "none":
             out = self.norm(out)
 
-        if self.nonlinearity != "none":
+        if self.nonlinearity == "relu":
             out = F.relu(out)
+        elif self.nonlinearity == "leaky_relu":
+            out = F.leaky_relu(out)
+        elif self.nonlinearity == "sigmoid":
+            out = F.sigmoid(out)
+        elif self.nonlinearity != "none":
+            raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
 
         return out
 
@@ -159,8 +161,7 @@ class Deconv3d(nn.Module):
         elif normalization=="group":
             self.norm = nn.GroupNorm(group_num, out_channels)
         elif normalization!="none":
-            print(f"ERROR: Unknown normalization function: '{normalization}'")
-            sys.exit(-1)
+            raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
 
     def forward(self, x):
         out = self.conv(x)
@@ -168,8 +169,14 @@ class Deconv3d(nn.Module):
         if self.normalization != "none":
             out = self.norm(out)
 
-        if self.nonlinearity != "none":
+        if self.nonlinearity == "relu":
             out = F.relu(out)
+        elif self.nonlinearity == "leaky_relu":
+            out = F.leaky_relu(out)
+        elif self.nonlinearity == "sigmoid":
+            out = F.sigmoid(out)
+        elif self.nonlinearity != "none":
+            raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
 
         return out
 
@@ -193,14 +200,12 @@ class SparseConv3d(nn.Module):
         if normalization=="batch":
             self.norm = spnn.BatchNorm(out_channels)
         elif normalization!="none":
-            print(f"ERROR: Unknown normalization function: '{normalization}'")
-            sys.exit(-1)
+            raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
 
         if (nonlinearity=="relu"):
             self.activation = spnn.ReLU(True)
         elif normalization!="none":
-            print(f"ERROR: Unknown nonlinearity function: '{nonlinearity}'")
-            sys.exit(-1)
+            raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
 
     def forward(self, x):
         if self.factorize:
@@ -235,11 +240,8 @@ def mlp(in_channels, hidden_channels, out_channels, bias=False, nonlinearity="re
         layers.append(nn.Tanh(True))
     elif (nonlinearity=="softmax"):
         layers.append(nn.Softmax(True))
-    elif (nonlinearity=="gelu"):
-        layers.append(nn.GELU(True))
     elif(nonlinearity!="none"):
-        print("ERROR: Unkown nonlinearity function: '{}'".format(nonlinearity))
-        sys.exit(-1)
+        raise Exception(f"ERROR: Unknown nonlinearity function: '{nonlinearity}'")
 
     layers.append(nn.Linear(hidden_channels, out_channels, bias=bias))
 

@@ -80,4 +80,4 @@ Repository = "https://github.com/nburgdorfer/sweep"
 
 [tool.uv.extra-build-dependencies]
 pytorch3d = ["torch"]
-torchsparse = ["torch"]
+torchsparse = ["torch", "numpy", "tqdm"]

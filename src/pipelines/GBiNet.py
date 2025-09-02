@@ -14,8 +14,8 @@ from src.evaluation.eval_2d import depth_acc
 from src.networks.GBiNet import Network
 
 class Pipeline(BasePipeline):
-    def __init__(self, cfg, config_path, log_path, model_name, training_scenes=None, validation_scenes=None, inference_scene=None):
-        super(Pipeline, self).__init__(cfg, config_path, log_path, model_name, training_scenes, validation_scenes, inference_scene)
+    def __init__(self, cfg, log_path, model_name, training_scenes=[], validation_scenes=[], inference_scene=[]):
+        super(Pipeline, self).__init__(cfg, log_path, model_name, training_scenes, validation_scenes, inference_scene)
         self.stage_ids = self.cfg["model"]["stage_ids"]
         self.loss_weights = self.cfg["loss"]["weights"]
         self.confidence_iterations = self.cfg["model"]["confidence_iterations"]

@@ -1,31 +1,28 @@
 # Python libraries
 import cv2
-import json
-import numpy as np
 import os
-import random
-import shutil
-import sys
+from typing import Any
+
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-import torch.optim.lr_scheduler as lr_sched
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from tqdm import tqdm
-import matplotlib.pyplot as plt
 
-from cvtkit.common import parameters_count, print_gpu_mem, to_gpu
-from cvtkit.io import load_pretrained_model, write_pfm, load_ckpt, save_ckpt, write_cam_sfm
+from cvtkit.common import parameters_count
+from cvtkit.io import write_pfm, load_ckpt, save_ckpt, write_cam_sfm
 
 ## Custom libraries
 from src.config import save_config
 from src.datasets.BaseDataset import build_dataset
-from src.evaluation.eval_2d import depth_acc
 
 class BasePipeline():
-    def __init__(self, cfg, config_path, log_path, model_name, training_scenes=None, validation_scenes=None, inference_scene=None):
+    def __init__(self,
+                 cfg: dict[str, Any],
+                 log_path: str,
+                 model_name: str,
+                 training_scenes: list[str],
+                 validation_scenes: list[str],
+                 inference_scene: list[str]):
         self.cfg = cfg
         self.device = self.cfg["device"]
         self.mode = self.cfg["mode"]

@@ -1,35 +1,21 @@
 # Python libraries
-import cv2
-import json
-import matplotlib.pyplot as plt
-import numpy as np
-import os
-import random
-import shutil
-import sys
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-import torch.optim.lr_scheduler as lr_sched
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from cvtkit.common import to_gpu, laplacian_pyramid
-from cvtkit.io import write_pfm
-from cvtkit.geometry import visibility, get_uncovered_mask, edge_mask
-from cvtkit.visualization import visualize_mvs, laplacian_depth_error, laplacian_count, laplacian_uncovered_count, plot_laplacian_matrix
+from cvtkit.common import to_gpu
+from cvtkit.visualization import visualize_mvs
 
 ## Custom libraries
 from src.pipelines.BasePipeline import BasePipeline
 from src.evaluation.eval_2d import depth_acc
+
 # MVSNet Network
 from src.networks.MVSNet import Network
 
 class Pipeline(BasePipeline):
-    def __init__(self, cfg, config_path, log_path, model_name, training_scenes=None, validation_scenes=None, inference_scene=None):
-            super(Pipeline, self).__init__(cfg, config_path, log_path, model_name, training_scenes, validation_scenes, inference_scene)
+    def __init__(self, cfg, log_path, model_name, training_scenes=[], validation_scenes=[], inference_scene=[]):
+            super(Pipeline, self).__init__(cfg, log_path, model_name, training_scenes, validation_scenes, inference_scene)
 
     def get_network(self):
         return Network(self.cfg, self.device).to(self.device)
