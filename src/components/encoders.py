@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.components.layers import Conv2d, Conv3d, Deconv3d, mlp
+from src.components.layers import Conv2d, Conv3d, ConvTranspose3d, mlp
 
 class BasicEncoder(nn.Module):
     def __init__(self, in_channels, c, out_channels, decode=False):
@@ -10,29 +10,29 @@ class BasicEncoder(nn.Module):
         self.decode = decode
 
         # H x W
-        conv0 = [Conv2d(in_channels=in_channels, out_channels=c, kernel_size=3, padding=1, normalization="batch")]
-        conv0.append(Conv2d(in_channels=c, out_channels=c, kernel_size=3, padding=1, normalization="batch"))
+        conv0 = [Conv2d(in_channels=in_channels, out_channels=c, kernel_size=3, padding=1)]
+        conv0.append(Conv2d(in_channels=c, out_channels=c, kernel_size=3, padding=1))
         self.conv0 = nn.Sequential(*nn.ModuleList(conv0))
 
         # H/2 x W/2
-        conv1 = [Conv2d(in_channels=c, out_channels=c*2, kernel_size=5, stride=2, padding=2, normalization="batch")]
-        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1, normalization="batch"))
-        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1, normalization="batch"))
+        conv1 = [Conv2d(in_channels=c, out_channels=c*2, kernel_size=5, stride=2, padding=2)]
+        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1))
+        conv1.append(Conv2d(in_channels=c*2, out_channels=c*2, kernel_size=3, padding=1))
         self.conv1 = nn.Sequential(*nn.ModuleList(conv1))
 
         # H/4 x W/4
-        conv2 = [Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=5, stride=2, padding=2, normalization="batch")]
-        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1, normalization="batch"))
-        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1, normalization="batch"))
+        conv2 = [Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=5, stride=2, padding=2)]
+        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1))
+        conv2.append(Conv2d(in_channels=c*4, out_channels=c*4, kernel_size=3, padding=1))
         self.conv2 = nn.Sequential(*nn.ModuleList(conv2))
 
         if self.decode:
-            self.conv3 = Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=3, padding=1, normalization="batch")
-            self.conv4 = Conv2d(in_channels=c, out_channels=c*2, kernel_size=3, padding=1, normalization="batch")
-            self.out1 = Conv2d(in_channels=c*4, out_channels=c*2, kernel_size=1, padding=0, normalization="batch")
-            self.out2 = Conv2d(in_channels=c*2, out_channels=out_channels, kernel_size=1, padding=0, normalization="none", nonlinearity="none")
+            self.conv3 = Conv2d(in_channels=c*2, out_channels=c*4, kernel_size=3, padding=1)
+            self.conv4 = Conv2d(in_channels=c, out_channels=c*2, kernel_size=3, padding=1)
+            self.out1 = Conv2d(in_channels=c*4, out_channels=c*2, kernel_size=1, padding=0)
+            self.out2 = Conv2d(in_channels=c*2, out_channels=out_channels, kernel_size=1, padding=0, normalization=None, nonlinearity=None)
         else:
-            self.out1 = Conv2d(in_channels=c*4, out_channels=out_channels, kernel_size=1, padding=0, normalization="none", nonlinearity="none")
+            self.out1 = Conv2d(in_channels=c*4, out_channels=out_channels, kernel_size=1, padding=0, normalization=None, nonlinearity=None)
 
 
     def forward(self, img):
@@ -115,7 +115,7 @@ class FPN(nn.Module):
                 Conv2d(
                     in_channels=hidden_channels[l],
                     out_channels=out_channels[l],
-                    normalization="none")
+                    normalization=None)
                 )
 
     def forward(self, data):      
@@ -156,7 +156,7 @@ class PSVEncoder(nn.Module):
 
         self.conv6 = Conv3d(c*4, c*4, kernel_size=(1,3,3), padding=(0,1,1))
         self.conv7 = Conv3d(c*4, c*4, kernel_size=(1,3,3), padding=(0,1,1))
-        self.conv8 = Conv3d(c*4, c*4, kernel_size=(1,3,3), padding=(0,1,1), normalization="none", nonlinearity="none")
+        self.conv8 = Conv3d(c*4, c*4, kernel_size=(1,3,3), padding=(0,1,1), normalization=None, nonlinearity=None)
 
     def forward(self, x):
         x = self.conv1(self.conv0(x)) # B x c x D x H x W
@@ -179,10 +179,10 @@ class PSVEncoder_up(nn.Module):
 
         self.conv6 = Conv3d(c*4, c*4, kernel_size=(1,3,3), padding=(0,1,1))
 
-        self.deconv7 = Deconv3d(c * 4, c * 4, kernel_size=(1,3,3), stride=2, padding=(0,1,1), output_padding=1)
-        self.deconv8 = Deconv3d((c*4) + (c*2), c * 4, kernel_size=(1,3,3), stride=2, padding=(0,1,1), output_padding=1)
+        self.deconv7 = ConvTranspose3d(c * 4, c * 4, kernel_size=(1,3,3), stride=2, padding=(0,1,1), output_padding=1)
+        self.deconv8 = ConvTranspose3d((c*4) + (c*2), c * 4, kernel_size=(1,3,3), stride=2, padding=(0,1,1), output_padding=1)
         self.conv9 = Conv3d((c*4)+c, c * 4, kernel_size=(1,3,3), padding=(0,1,1))
-        self.conv10 = Conv3d((c*4)+in_channels, c * 4, kernel_size=(1,3,3), padding=(0,1,1), normalization="none", nonlinearity="none")
+        self.conv10 = Conv3d((c*4)+in_channels, c * 4, kernel_size=(1,3,3), padding=(0,1,1), normalization=None, nonlinearity=None)
 
     def forward(self, x):
         z0 = self.conv1(self.conv0(x)) # B x 8 x H x W

@@ -1,3 +1,5 @@
+from typing import Any
+
 import torch.nn as nn
 import torch.nn.functional as F
 # from torchsparse import nn as spnn
@@ -6,34 +8,47 @@ import torch.nn.functional as F
 # 2D Convolution
 #############################################
 class Conv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, normalization="batch", nonlinearity="leaky_relu", group_num=2):
+    def __init__(
+            self,
+            in_channels:int,
+            out_channels:int,
+            kernel_size:int|tuple[int,int]=3,
+            stride:int|tuple[int,int]=1,
+            padding:int|tuple[int,int]=1,
+            normalization:dict[str, Any] | None={"type": "batch"},
+            nonlinearity:dict[str, Any] | None={"type": "relu"}
+        ):
         super(Conv2d, self).__init__()
-        self.normalization = normalization
-        self.nonlinearity = nonlinearity
 
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=(normalization=="none"))
 
-        if normalization=="batch":
-            self.norm = nn.BatchNorm2d(out_channels)
-        elif normalization=="group":
-            self.norm = nn.GroupNorm(group_num, out_channels)
-        elif normalization!="none":
-            raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
+        if normalization is not None:
+            if normalization["type"]=="batch":
+                self.norm = nn.BatchNorm2d(out_channels)
+            elif normalization["type"]=="group":
+                self.norm = nn.GroupNorm(normalization["group_num"], out_channels)
+            else:
+                raise Exception(f"ERROR: Unknown normalization function: '{normalization["type"]}'")
+        else:
+            self.norm = None
+
+        self.nonlinearity = nonlinearity
 
     def forward(self, x):
         out = self.conv(x)
 
-        if self.normalization != "none":
+        if self.norm is not None:
             out = self.norm(out)
 
-        if self.nonlinearity == "relu":
-            out = F.relu(out)
-        elif self.nonlinearity == "leaky_relu":
-            out = F.leaky_relu(out)
-        elif self.nonlinearity == "sigmoid":
-            out = F.sigmoid(out)
-        elif self.nonlinearity != "none":
-            raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
+        if self.nonlinearity is not None:
+            if self.nonlinearity["type"] == "relu":
+                out = F.relu(out)
+            elif self.nonlinearity["type"] == "leaky_relu":
+                out = F.leaky_relu(out)
+            elif self.nonlinearity["type"] == "sigmoid":
+                out = F.sigmoid(out)
+            else:
+                raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity["type"]}'")
 
         return out
 
@@ -41,35 +56,49 @@ class Conv2d(nn.Module):
 #############################################
 # 2D Deconvolution
 #############################################
-class Deconv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, output_padding=1, normalization="batch", nonlinearity="relu", group_num=8):
-        super(Deconv2d, self).__init__()
-        self.normalization = normalization
-        self.nonlinearity = nonlinearity
+class ConvTranspose2d(nn.Module):
+    def __init__(
+            self,
+            in_channels:int,
+            out_channels:int,
+            kernel_size:int|tuple[int,int]=3,
+            stride:int|tuple[int,int]=1,
+            padding:int|tuple[int,int]=1,
+            output_padding:int|tuple[int,int]=1,
+            normalization:dict[str, Any] | None={"type": "batch"},
+            nonlinearity:dict[str, Any] | None={"type": "relu"}
+        ):
+        super(ConvTranspose2d, self).__init__()
 
         self.conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, output_padding=output_padding, bias=(normalization=="none"))
 
-        if normalization=="batch":
-            self.norm = nn.BatchNorm2d(out_channels)
-        elif normalization=="group":
-            self.norm = nn.GroupNorm(group_num, out_channels)
-        elif normalization!="none":
-            raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
+        if normalization is not None:
+            if normalization["type"]=="batch":
+                self.norm = nn.BatchNorm2d(out_channels)
+            elif normalization["type"]=="group":
+                self.norm = nn.GroupNorm(normalization["group_num"], out_channels)
+            else:
+                raise Exception(f"ERROR: Unknown normalization function: '{normalization["type"]}'")
+        else:
+            self.norm = None
+
+        self.nonlinearity = nonlinearity
 
     def forward(self, x):
         out = self.conv(x)
 
-        if self.normalization != "none":
+        if self.norm is not None:
             out = self.norm(out)
 
-        if self.nonlinearity == "relu":
-            out = F.relu(out)
-        elif self.nonlinearity == "leaky_relu":
-            out = F.leaky_relu(out)
-        elif self.nonlinearity == "sigmoid":
-            out = F.sigmoid(out)
-        elif self.nonlinearity != "none":
-            raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
+        if self.nonlinearity is not None:
+            if self.nonlinearity["type"] == "relu":
+                out = F.relu(out)
+            elif self.nonlinearity["type"] == "leaky_relu":
+                out = F.leaky_relu(out)
+            elif self.nonlinearity["type"] == "sigmoid":
+                out = F.sigmoid(out)
+            else:
+                raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity["type"]}'")
 
         return out
     
@@ -114,69 +143,96 @@ class Deconv2d(nn.Module):
 # 3D Convolution
 #############################################
 class Conv3d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, normalization="batch", nonlinearity="relu", group_num=8):
+    def __init__(
+            self,
+            in_channels:int,
+            out_channels:int,
+            kernel_size:int|tuple[int,int,int]=3,
+            stride:int|tuple[int,int,int]=1,
+            padding:int|tuple[int,int,int]=1,
+            normalization:dict[str, Any] | None={"type": "batch"},
+            nonlinearity:dict[str, Any] | None={"type": "relu"}
+    ):
         super(Conv3d, self).__init__()
-        self.normalization = normalization
-        self.nonlinearity = nonlinearity
 
         self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=(normalization=="none"))
 
-        if normalization=="batch":
-            self.norm = nn.BatchNorm3d(out_channels)
-        elif normalization=="group":
-            self.norm = nn.GroupNorm(group_num, out_channels)
-        elif normalization!="none":
-            raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
+        if normalization is not None:
+            if normalization["type"]=="batch":
+                self.norm = nn.BatchNorm3d(out_channels)
+            elif normalization["type"]=="group":
+                self.norm = nn.GroupNorm(normalization["group_num"], out_channels)
+            else:
+                raise Exception(f"ERROR: Unknown normalization function: '{normalization["type"]}'")
+        else:
+            self.norm = None
+
+        self.nonlinearity = nonlinearity
 
     def forward(self, x):
         out = self.conv(x)
 
-        if self.normalization != "none":
+        if self.norm is not None:
             out = self.norm(out)
 
-        if self.nonlinearity == "relu":
-            out = F.relu(out)
-        elif self.nonlinearity == "leaky_relu":
-            out = F.leaky_relu(out)
-        elif self.nonlinearity == "sigmoid":
-            out = F.sigmoid(out)
-        elif self.nonlinearity != "none":
-            raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
+        if self.nonlinearity is not None:
+            if self.nonlinearity["type"] == "relu":
+                out = F.relu(out)
+            elif self.nonlinearity["type"] == "leaky_relu":
+                out = F.leaky_relu(out)
+            elif self.nonlinearity["type"] == "sigmoid":
+                out = F.sigmoid(out)
+            else:
+                raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity["type"]}'")
 
         return out
 
 #############################################
 # 3D Deconvolution
 #############################################
-class Deconv3d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, output_padding=1, normalization="batch", nonlinearity="relu", group_num=8):
-        super(Deconv3d, self).__init__()
-        self.normalization = normalization
-        self.nonlinearity = nonlinearity
+class ConvTranspose3d(nn.Module):
+    def __init__(
+            self,
+            in_channels:int,
+            out_channels:int,
+            kernel_size:int|tuple[int,int,int]=3,
+            stride:int|tuple[int,int,int]=1,
+            padding:int|tuple[int,int,int]=1,
+            output_padding:int|tuple[int,int,int]=1,
+            normalization:dict[str, Any] | None={"type": "batch"},
+            nonlinearity:dict[str, Any] | None={"type": "relu"}
+    ):
+        super(ConvTranspose3d, self).__init__()
 
         self.conv = nn.ConvTranspose3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, output_padding=output_padding, bias=(normalization=="none"))
 
-        if normalization=="batch":
-            self.norm = nn.BatchNorm3d(out_channels)
-        elif normalization=="group":
-            self.norm = nn.GroupNorm(group_num, out_channels)
-        elif normalization!="none":
-            raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
+        if normalization is not None:
+            if normalization["type"]=="batch":
+                self.norm = nn.BatchNorm3d(out_channels)
+            elif normalization["type"]=="group":
+                self.norm = nn.GroupNorm(normalization["group_num"], out_channels)
+            else:
+                raise Exception(f"ERROR: Unknown normalization function: '{normalization["type"]}'")
+        else:
+            self.norm = None
+
+        self.nonlinearity = nonlinearity
 
     def forward(self, x):
         out = self.conv(x)
 
-        if self.normalization != "none":
+        if self.norm is not None:
             out = self.norm(out)
 
-        if self.nonlinearity == "relu":
-            out = F.relu(out)
-        elif self.nonlinearity == "leaky_relu":
-            out = F.leaky_relu(out)
-        elif self.nonlinearity == "sigmoid":
-            out = F.sigmoid(out)
-        elif self.nonlinearity != "none":
-            raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
+        if self.nonlinearity is not None:
+            if self.nonlinearity["type"] == "relu":
+                out = F.relu(out)
+            elif self.nonlinearity["type"] == "leaky_relu":
+                out = F.leaky_relu(out)
+            elif self.nonlinearity["type"] == "sigmoid":
+                out = F.sigmoid(out)
+            else:
+                raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity["type"]}'")
 
         return out
 
