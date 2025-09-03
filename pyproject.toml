@@ -39,7 +39,6 @@ dependencies = [
     "pillow>=11.3.0",
     "plyfile>=1.1.2",
     "pytest>=8.4.1",
-    "pytorch3d",
     "scikit-image>=0.25.2",
     "scikit-learn>=1.7.1",
     "scipy>=1.16.1",
@@ -60,7 +59,6 @@ torchvision = [
   { index = "pytorch-cpu", marker = "sys_platform != 'linux'" },
   { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
 ]
-pytorch3d = { git = "https://github.com/facebookresearch/pytorch3d.git" }
 torchsparse = { git = "https://github.com/mit-han-lab/torchsparse.git" }
 
 
@@ -79,5 +77,4 @@ Homepage = "https://nburgdorfer.github.io/cvtkit/"
 Repository = "https://github.com/nburgdorfer/sweep"
 
 [tool.uv.extra-build-dependencies]
-pytorch3d = ["torch"]
 torchsparse = ["torch", "numpy", "tqdm"]
