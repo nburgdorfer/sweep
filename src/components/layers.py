@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from torchsparse import nn as spnn
+# from torchsparse import nn as spnn
 
 #############################################
 # 2D Convolution
@@ -180,46 +180,46 @@ class Deconv3d(nn.Module):
 
         return out
 
-#############################################
-# 3D Sparse Convolution
-#############################################
-class SparseConv3d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, normalization="batch", nonlinearity="relu", transposed=False, bias=False, factorize=True):
-        super(SparseConv3d, self).__init__()
-        self.normalization = normalization
-        self.nonlinearity = nonlinearity
-        self.factorize = factorize
+# #############################################
+# # 3D Sparse Convolution
+# #############################################
+# class SparseConv3d(nn.Module):
+#     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, normalization="batch", nonlinearity="relu", transposed=False, bias=False, factorize=True):
+#         super(SparseConv3d, self).__init__()
+#         self.normalization = normalization
+#         self.nonlinearity = nonlinearity
+#         self.factorize = factorize
 
-        if self.factorize:
-            self.conv1 = spnn.Conv3d(in_channels, in_channels, kernel_size=(1,1,kernel_size), stride=stride, bias=(normalization!="batch"), transposed=transposed)
-            self.conv2 = spnn.Conv3d(in_channels, in_channels, kernel_size=(1,kernel_size,1), stride=stride, bias=(normalization!="batch"), transposed=transposed)
-            self.conv3 = spnn.Conv3d(in_channels, out_channels, kernel_size=(kernel_size,1,1), stride=stride, bias=(normalization!="batch"), transposed=transposed)
-        else:
-            self.conv = spnn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, bias=(normalization!="batch"), transposed=transposed)
+#         if self.factorize:
+#             self.conv1 = spnn.Conv3d(in_channels, in_channels, kernel_size=(1,1,kernel_size), stride=stride, bias=(normalization!="batch"), transposed=transposed)
+#             self.conv2 = spnn.Conv3d(in_channels, in_channels, kernel_size=(1,kernel_size,1), stride=stride, bias=(normalization!="batch"), transposed=transposed)
+#             self.conv3 = spnn.Conv3d(in_channels, out_channels, kernel_size=(kernel_size,1,1), stride=stride, bias=(normalization!="batch"), transposed=transposed)
+#         else:
+#             self.conv = spnn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, bias=(normalization!="batch"), transposed=transposed)
 
-        if normalization=="batch":
-            self.norm = spnn.BatchNorm(out_channels)
-        elif normalization!="none":
-            raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
+#         if normalization=="batch":
+#             self.norm = spnn.BatchNorm(out_channels)
+#         elif normalization!="none":
+#             raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
 
-        if (nonlinearity=="relu"):
-            self.activation = spnn.ReLU(True)
-        elif normalization!="none":
-            raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
+#         if (nonlinearity=="relu"):
+#             self.activation = spnn.ReLU(True)
+#         elif normalization!="none":
+#             raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
 
-    def forward(self, x):
-        if self.factorize:
-            out = self.conv3(self.conv2(self.conv1(x)))
-        else:
-            out = self.conv(x)
+#     def forward(self, x):
+#         if self.factorize:
+#             out = self.conv3(self.conv2(self.conv1(x)))
+#         else:
+#             out = self.conv(x)
 
-        if self.normalization != "none":
-            out = self.norm(out)
+#         if self.normalization != "none":
+#             out = self.norm(out)
 
-        if self.nonlinearity != "none":
-            out = self.activation(out)
+#         if self.nonlinearity != "none":
+#             out = self.activation(out)
 
-        return out
+#         return out
 
 
 #############################################
