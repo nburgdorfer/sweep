@@ -48,7 +48,7 @@ avg_fscore = np.zeros((len(scenes)))
 
 for i, scene in enumerate(scenes):
     print(f"\n----Running MVS on {scene}----")
-    pipeline = Pipeline(cfg=cfg, config_path=ARGS.config_path, log_path=ARGS.log_path, model_name=ARGS.model, inference_scene=[scene])
+    pipeline = Pipeline(cfg=cfg, log_path=ARGS.log_path, model_name=ARGS.model, inference_scene=[scene])
     pipeline.inference()
 
     ####### 2D EVALUATION ####
