@@ -2,7 +2,7 @@ from typing import Any
 
 import torch.nn as nn
 import torch.nn.functional as F
-# from torchsparse import nn as spnn
+from torchsparse import nn as spnn
 
 #############################################
 # 2D Convolution
@@ -236,46 +236,65 @@ class ConvTranspose3d(nn.Module):
 
         return out
 
-# #############################################
-# # 3D Sparse Convolution
-# #############################################
-# class SparseConv3d(nn.Module):
-#     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, normalization="batch", nonlinearity="relu", transposed=False, bias=False, factorize=True):
-#         super(SparseConv3d, self).__init__()
-#         self.normalization = normalization
-#         self.nonlinearity = nonlinearity
-#         self.factorize = factorize
+#############################################
+# 3D Sparse Convolution
+#############################################
+class SparseConv3d(nn.Module):
+    def __init__(
+            self,
+            in_channels:int,
+            out_channels:int,
+            kernel_size:int|tuple[int,int,int]=3,
+            stride:int|tuple[int,int,int]=1,
+            normalization:dict[str, Any] | None={"type": "batch"},
+            nonlinearity:dict[str, Any] | None={"type": "relu"},
+            transposed=False,
+            factorize=True
+    ):
+        super(SparseConv3d, self).__init__()
+        self.normalization = normalization
+        self.nonlinearity = nonlinearity
+        self.factorize = factorize
+        bias = (normalization is None) or (normalization["type"]!="batch")
 
-#         if self.factorize:
-#             self.conv1 = spnn.Conv3d(in_channels, in_channels, kernel_size=(1,1,kernel_size), stride=stride, bias=(normalization!="batch"), transposed=transposed)
-#             self.conv2 = spnn.Conv3d(in_channels, in_channels, kernel_size=(1,kernel_size,1), stride=stride, bias=(normalization!="batch"), transposed=transposed)
-#             self.conv3 = spnn.Conv3d(in_channels, out_channels, kernel_size=(kernel_size,1,1), stride=stride, bias=(normalization!="batch"), transposed=transposed)
-#         else:
-#             self.conv = spnn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, bias=(normalization!="batch"), transposed=transposed)
+        if self.factorize:
+            assert isinstance(kernel_size, int)
+            assert isinstance(stride, int)
+            conv1 = spnn.Conv3d(in_channels, in_channels, kernel_size=(1,1,kernel_size), stride=(0,0,stride), bias=bias, transposed=transposed)
+            conv2 = spnn.Conv3d(in_channels, in_channels, kernel_size=(1,kernel_size,1), stride=(1,stride,1), bias=bias, transposed=transposed)
+            conv3 = spnn.Conv3d(in_channels, out_channels, kernel_size=(kernel_size,1,1), stride=(stride,1,1), bias=bias, transposed=transposed)
+            self.conv = nn.Sequential(nn.ModuleList([conv1, conv2, conv3]))
+        else:
+            self.conv = spnn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, bias=bias, transposed=transposed)
 
-#         if normalization=="batch":
-#             self.norm = spnn.BatchNorm(out_channels)
-#         elif normalization!="none":
-#             raise Exception(f"ERROR: Unknown normalization function: '{normalization}'")
+        if normalization is not None:
+            if normalization["type"]=="batch":
+                self.norm = nn.BatchNorm3d(out_channels)
+            elif normalization["type"]=="group":
+                self.norm = nn.GroupNorm(normalization["group_num"], out_channels)
+            else:
+                raise Exception(f"ERROR: Unknown normalization function: '{normalization["type"]}'")
+        else:
+            self.norm = None
 
-#         if (nonlinearity=="relu"):
-#             self.activation = spnn.ReLU(True)
-#         elif normalization!="none":
-#             raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
+        if nonlinearity is not None:
+            if nonlinearity["type"]=="relu":
+                self.activation = spnn.ReLU(True)
+            else:
+                raise Exception(f"ERROR: Unknown normalization function: '{nonlinearity["type"]}'")
+        else:
+            self.activation = None
 
-#     def forward(self, x):
-#         if self.factorize:
-#             out = self.conv3(self.conv2(self.conv1(x)))
-#         else:
-#             out = self.conv(x)
+    def forward(self, x):
+        out = self.conv(x)
 
-#         if self.normalization != "none":
-#             out = self.norm(out)
+        if self.norm is not None:
+            out = self.norm(out)
 
-#         if self.nonlinearity != "none":
-#             out = self.activation(out)
+        if self.activation is not None:
+            out = self.activation(out)
 
-#         return out
+        return out
 
 
 #############################################
