@@ -124,7 +124,7 @@ class BasePipeline():
                                          shuffle=True,
                                          num_workers=self.cfg["num_workers"],
                                          pin_memory=True,
-                                         drop_last=False)
+                                         drop_last=True)
 
         else:
             self.inference_dataset = build_dataset(self.cfg, self.mode, self.inference_scene)

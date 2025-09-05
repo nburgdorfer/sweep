@@ -2,18 +2,18 @@
 
 DATASET=$1
 MODEL=$2
-DEVICES=$3
+# DEVICES=$3
 
 CONFIG_PATH=configs/${MODEL}/${DATASET}/
 ## Logging
-TEST_SAVE_DIR=${DATASET}_training_$(date +"%F-%T")
+TEST_SAVE_DIR=${DATASET}_${MODEL}_training_$(date +"%F-%T")
 LOG_PATH="log/${TEST_SAVE_DIR}/"
 if [ ! -d ${LOG_PATH} ]; then
     mkdir -p ${LOG_PATH};
     touch ${LOG_PATH}/log.txt;
 fi
 
-CUDA_VISIBLE_DEVICES=${DEVICES} \
+# CUDA_VISIBLE_DEVICES=${DEVICES} \
 PYTHONPATH="$(dirname $0)/..":$PYTHONPATH \
 python -W ignore -u scripts/training.py \
 	--config_path $CONFIG_PATH \

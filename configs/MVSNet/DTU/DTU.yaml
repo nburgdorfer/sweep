@@ -1,5 +1,5 @@
-data_path: /mnt/Drive2/DTU
-output_path: /mnt/Drive1/Results/DTU/MVSNet/
+data_path: /home/nburgdor/data/DTU/
+output_path: /home/nburgdor/Results/DTU/MVSNet/
 device: cuda:0
 seed: 43
 num_workers: 4
@@ -39,7 +39,7 @@ point_cloud:
   resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
-    batch_size: 2
+    batch_size: 4
     ckpt_file:
     depth_planes: 256
     epochs: 30
@@ -48,15 +48,15 @@ training:
     learning_rate: 0.001
     lr_steps: 10,12,14
     lr_gamma: 0.50
-    max_training_samples: 5000
-    max_val_samples: 1000
+    max_training_samples:
+    max_val_samples:
     mvs_ckpt_freq: 1
     num_frame: 3
     random_crop: False
     sample_mode: cluster
     scale: 0.5
-    visualize: True
+    visualize: False
     vis_freq: 100
 
 visualization:
-    max_depth_error: 8.0
+    max_depth_error: 5.0
