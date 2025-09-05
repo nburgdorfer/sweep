@@ -49,6 +49,7 @@ class Network(nn.Module):
             for j in range(self.resolution_levels):
                 image_features[j].append(features_i[j])
 
+        print(image_features.keys())
         return image_features
 
     def subdivide_hypotheses(self, hypotheses, pred_hypo_index, iteration):
