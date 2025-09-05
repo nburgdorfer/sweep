@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from torchsparse import nn as spnn
-from torchsparse import SparseTensor
+# from torchsparse import nn as spnn
+# from torchsparse import SparseTensor
 
 from src.components.layers import Conv3d, ConvTranspose3d, SparseConv3d
 

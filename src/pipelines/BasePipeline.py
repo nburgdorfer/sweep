@@ -151,13 +151,13 @@ class BasePipeline():
                 load_ckpt(self.model, self.cfg["training"]["ckpt_file"])
 
     def build_optimizer(self):
-        rate = self.cfg["training"]["learning_rate"]
-        self.optimizer = optim.Adam(self.parameters_to_train, lr=rate, betas=(0.9, 0.999))
+        rate = self.cfg["optimizer"]["learning_rate"]
+        self.optimizer = optim.AdamW(self.parameters_to_train, lr=rate, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01)
 
     def build_scheduler(self):
-        lr_steps = [int(epoch_idx) for epoch_idx in self.cfg["training"]["lr_steps"].split(',')]
-        lr_gamma = float(self.cfg["training"]["lr_gamma"])
-        self.lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, lr_steps, gamma=lr_gamma)
+        T_max = self.cfg["training"]["epochs"]
+        eta_min = self.cfg["optimizer"]["eta_min"]
+        self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=T_max, eta_min=eta_min)
 
     def training(self):
         for epoch in range(self.cfg["training"]["epochs"]):

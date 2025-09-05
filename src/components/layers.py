@@ -2,7 +2,7 @@ from typing import Any
 
 import torch.nn as nn
 import torch.nn.functional as F
-from torchsparse import nn as spnn
+# from torchsparse import nn as spnn
 
 #############################################
 # 2D Convolution

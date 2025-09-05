@@ -31,6 +31,11 @@ model:
     stage_ids: [0,0,1,1,2,2,3,3] # The resolution stages for each iteration
     confidence_iterations: 6 # number of iterations to accumulate confidence
 
+optimizer:
+    grad_clip: 100.0
+    learning_rate: 0.0001
+    eta_min: 0.00000001
+
 point_cloud:
   image_region_th: 2
   depth_region_th: 2
@@ -48,17 +53,13 @@ training:
     ckpt_file: 
     epochs: 30
     frame_spacing: 1
-    grad_clip: 10.0
-    learning_rate: 0.0001
-    lr_steps: 10,12,14
-    lr_gamma: 0.50
-    max_training_samples: 5000
-    max_val_samples: 1000
+    max_training_samples:
+    max_val_samples:
     num_frame: 5
     random_crop: True
     sample_mode: cluster
     scale: 0.5
-    visualize: True
+    visualize: False
     vis_freq: 100
 
 visualization:

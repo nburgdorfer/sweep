@@ -111,7 +111,7 @@ class Pipeline(BasePipeline):
                         # Compute backward pass
                         if mode != "validation":
                             loss["total"].backward()
-                            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg["training"]["grad_clip"])
+                            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg["optimizer"]["grad_clip"])
                             self.optimizer.step()
 
                 # confidence average
