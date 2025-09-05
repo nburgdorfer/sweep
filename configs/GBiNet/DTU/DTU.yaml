@@ -26,9 +26,9 @@ loss:
     weights: [1,1,1,1]
 
 model:
-    feature_channels: [64,32,16,8] # coarse -> fine
-    group_channels: [8,8,8,4] # coarse -> fine
-    stage_ids: [0,0,1,1,2,2,3,3] # coarse -> fine
+    feature_channels: [8, 16, 32, 64] # fine -> coarse
+    group_channels: [4,8,8,8] # fine -> coarse
+    stage_ids: [0,0,1,1,2,2,3,3] # The resolution stages for each iteration
     confidence_iterations: 6 # number of iterations to accumulate confidence
 
 point_cloud:

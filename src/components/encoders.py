@@ -57,6 +57,7 @@ class FPN(nn.Module):
                  block_size=4,
                  levels=4,
                  out_levels=4,
+                 low_res_first=True
                  ):
         """
         Args:
@@ -66,6 +67,9 @@ class FPN(nn.Module):
             block_size: The number of convolution layers per convolution block.
             levels: The number of total pyramid layers.
             out_levels: The expected number of output feature maps.
+            low_res_first: Specifies the resolution order of the output features list.
+                if True, the list will be coarse->fine (element 0 will be the lowest resolution);
+                if False, the list will be fine->coarse (element 0 will be the highest resolution)
         """
         super(FPN, self).__init__()
 
@@ -75,6 +79,7 @@ class FPN(nn.Module):
 
         self.levels = levels
         self.out_levels = out_levels
+        self.low_res_first = low_res_first
 
         # build hidden channels list
         hidden_channels = []
@@ -136,8 +141,11 @@ class FPN(nn.Module):
         ### Out Convolution ###
         out_features = []
         for l in range(self.out_levels):
-            out_features.insert(0, self.out_conv[l](down_features[l]))
+            out_features.append(self.out_conv[l](down_features[l]))
 
+        if self.low_res_first:
+            out_features = out_features[::-1]
+        
         return out_features
 
 

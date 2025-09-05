@@ -39,7 +39,7 @@ class Network(nn.Module):
         self.view_weight_nets = nn.ModuleList([PixelwiseNet(self.group_channels[i]) for i in range(self.resolution_levels)])
 
     def build_features(self, data):
-        batch_size, views, _, height, width = data["images"].shape
+        views = data["images"].shape[1]
         images = data["images"]
 
         image_features = {i:[] for i in range(self.resolution_levels)}
@@ -49,7 +49,6 @@ class Network(nn.Module):
             for j in range(self.resolution_levels):
                 image_features[j].append(features_i[j])
 
-        print(image_features.keys())
         return image_features
 
     def subdivide_hypotheses(self, hypotheses, pred_hypo_index, iteration):
@@ -77,13 +76,13 @@ class Network(nn.Module):
         
         return next_hypotheses
 
-    def forward(self, data, stage_id, iteration, prob_out_depth=6):
-        batch_size, views, _, height, width = data["images"].shape
+    def forward(self, data, stage_id, iteration):
+        batch_size, _, _, height, width = data["images"].shape
         output = {}
 
         # build image features
         image_features = self.build_features(data)[stage_id]
-        batch_size, channels, height, width = image_features[0].shape
+        batch_size, _, height, width = image_features[0].shape
 
         if iteration==0:
             hypotheses, _, _ = uniform_hypothesis(
