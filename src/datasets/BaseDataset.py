@@ -103,7 +103,8 @@ class BaseDataset(Dataset[dict[str, Any]]):
 
     def shuffle_and_subsample(self):
         np.random.shuffle(self.total_samples)
-        num_samples = min(len(self.total_samples), self.max_samples)
+        # num_samples = min(len(self.total_samples), self.max_samples)
+        num_samples = len(self.total_samples)
         self.samples = self.total_samples[:num_samples]
 
     def __len__(self):
