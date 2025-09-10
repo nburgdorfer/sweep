@@ -13,7 +13,6 @@ from src.datasets.BaseDataset import BaseDataset
 class DTU(BaseDataset):
     def __init__(self, cfg: dict[Any,Any], mode: str, scenes: list[str]):
         super(DTU, self).__init__(cfg, mode, scenes)
-        self.units = "mm"
         if mode=="inference":
             self.gt_depth_path = os.path.join(self.data_path, "Depths", scenes[0])
 

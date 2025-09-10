@@ -39,8 +39,8 @@ class Network(nn.Module):
         #### View Weight Network
         self.view_weight_nets = nn.ModuleList([PixelwiseNet(self.group_channels[i]) for i in range(self.resolution_levels)])
 
-        #### Depth Refiner
-        self.refiner = BasicRefiner(in_channels=4, c=8)
+        # #### Depth Refiner
+        # self.refiner = BasicRefiner(in_channels=4, c=8)
 
     def build_features(self, data):
         views = data["images"].shape[1]
@@ -133,15 +133,16 @@ class Network(nn.Module):
             depth = F.interpolate(depth, size=(self.height, self.width), mode="bilinear")
             confidence = F.interpolate(confidence, size=(self.height, self.width), mode="bilinear")
 
-        # Depth Refinement
-        ref_image =  data["images"][:,0]
-        refined_depth = self.refiner(ref_image, depth)
+        # # Depth Refinement
+        # ref_image =  data["images"][:,0]
+        # refined_depth = self.refiner(ref_image, depth)
 
         output["hypotheses"] = hypotheses
         output["next_hypotheses"] = next_hypotheses
         output["cost_volume"] = cost_volume
         output["pred_hypo_index"] = pred_hypo_index
-        output["final_depth"] = refined_depth
+        # output["final_depth"] = refined_depth
+        output["final_depth"] = depth
         output["confidence"] = confidence
 
         return output
