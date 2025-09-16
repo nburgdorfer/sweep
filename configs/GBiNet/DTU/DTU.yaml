@@ -31,7 +31,7 @@ model:
     feature_channels: [8, 16, 32, 64] # fine -> coarse
     group_channels: [4,8,8,8] # fine -> coarse
     confidence_iterations: 6 # number of iterations to accumulate confidence
-    resolution_levels: [0,0,1,1,2,2,3,3] # The resolution stages for each iteration
+    resolution_stages: [0,0,1,1,2,2,3,3] # The resolution stages for each iteration
     stage_training: False
     stage_intervals: [5,10,15]
 
@@ -53,7 +53,7 @@ point_cloud:
   resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
-    batch_size: 4
+    batch_size: 8
     ckpt_file: 
     epochs: 30
     frame_spacing: 1

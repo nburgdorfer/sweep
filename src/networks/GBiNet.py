@@ -13,8 +13,8 @@ class Network(nn.Module):
         super(Network, self).__init__()
         self.cfg = cfg
         self.device = cfg["device"]
-        self.stage_ids = self.cfg["model"]["stage_ids"]
-        self.iterations = len(self.stage_ids)
+        self.resolution_stages = self.cfg["model"]["resolution_stages"]
+        self.max_stages = len(self.resolution_stages)
         self.mode = self.cfg["mode"]
         self.group_channels = self.cfg["model"]["group_channels"]
         self.feature_channels = self.cfg["model"]["feature_channels"]
@@ -74,8 +74,8 @@ class Network(nn.Module):
             next_hypotheses = next_hypotheses - shift_down.max(dim=1, keepdim=True)[0]
 
             # increase resolution if next stage increases resolution
-            if iteration+1 < self.iterations:
-                if (self.stage_ids[iteration+1] > self.stage_ids[iteration]):
+            if iteration+1 < self.max_stages:
+                if (self.resolution_stages[iteration+1] > self.resolution_stages[iteration]):
                     next_hypotheses = F.interpolate(next_hypotheses, scale_factor=2, mode="nearest")
         
         return next_hypotheses
@@ -102,13 +102,17 @@ class Network(nn.Module):
             )
 
         else:
-            hypotheses = data["hypotheses"][iteration]
+            hypotheses = data["hypotheses"][iteration].unsqueeze(1)
 
         view_weights = data.get("view_weights", None)
         if view_weights is None:
             vwa_net = self.view_weight_nets[resolution_level]
         else:
             vwa_net = None
+            
+            # turn off gradient for pre-computed view weights
+            for i, vw in enumerate(view_weights):
+                view_weights[i] = vw.detach()
 
         #### Build cost volume ####
         cost_volume, view_weights = homography_warp(

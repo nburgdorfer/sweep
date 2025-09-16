@@ -16,7 +16,7 @@ from src.networks.GBiNet import Network
 class Pipeline(BasePipeline):
     def __init__(self, cfg, log_path, model_name, training_scenes=[], validation_scenes=[], inference_scene=[]):
         super(Pipeline, self).__init__(cfg, log_path, model_name, training_scenes, validation_scenes, inference_scene)
-        self.resolution_levels = self.cfg["model"]["resolution_levels"]
+        self.resolution_stages = self.cfg["model"]["resolution_stages"]
         self.loss_weights = self.cfg["loss"]["weights"]
         self.confidence_iterations = self.cfg["model"]["confidence_iterations"]
         self.stage_intervals = self.cfg["model"]["stage_intervals"]
@@ -94,13 +94,13 @@ class Pipeline(BasePipeline):
                 to_gpu(data, self.device)
                 
                 # build image features
-                data["hypotheses"] = [None]*(len(self.resolution_levels))
+                data["hypotheses"] = [None]*(len(self.resolution_stages))
 
                 confidence = torch.zeros((self.batch_size, 1, dataset.H, dataset.W), dtype=torch.float32, device=self.device)
                 output = {}
                 loss = {}
-                num_stages = len(self.resolution_levels)
-                for iteration, resolution_level in enumerate(self.resolution_levels):
+                num_stages = len(self.resolution_stages)
+                for iteration, resolution_level in enumerate(self.resolution_stages):
                     if self.stage_training and (resolution_level > self.current_resolution) and (mode != "inference"):
                         break                
 
