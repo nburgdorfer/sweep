@@ -28,7 +28,7 @@ class Network(nn.Module):
                         in_channels=3,
                         out_channels=self.feature_channels,
                         base_channels=8,
-                        block_size=2,
+                        block_size=4,
                         levels=4,
                         out_levels=4
                     )
@@ -39,8 +39,8 @@ class Network(nn.Module):
         #### View Weight Network
         self.view_weight_nets = nn.ModuleList([PixelwiseNet(self.group_channels[i]) for i in range(self.resolution_levels)])
 
-        # #### Depth Refiner
-        # self.refiner = BasicRefiner(in_channels=4, c=8)
+        #### Depth Refiner
+        self.refiner = BasicRefiner(in_channels=4, c=8)
 
     def build_features(self, data):
         views = data["images"].shape[1]
@@ -80,12 +80,12 @@ class Network(nn.Module):
         
         return next_hypotheses
 
-    def forward(self, data, stage_id, iteration):
+    def forward(self, data, resolution_level, iteration, final_iteration):
         batch_size, _, _, height, width = data["images"].shape
         output = {}
 
         # build image features
-        image_features = self.build_features(data)[stage_id]
+        image_features = self.build_features(data)[resolution_level]
         batch_size, _, height, width = image_features[0].shape
 
         if iteration==0:
@@ -104,21 +104,28 @@ class Network(nn.Module):
         else:
             hypotheses = data["hypotheses"][iteration]
 
+        view_weights = data.get("view_weights", None)
+        if view_weights is None:
+            vwa_net = self.view_weight_nets[resolution_level]
+        else:
+            vwa_net = None
+
         #### Build cost volume ####
-        cost_volume, _ = homography_warp(
-            self.cfg,
-            image_features,
-            data["multires_intrinsics"][:,:,stage_id], 
-            data["poses"],
-            hypotheses,
-            self.group_channels[stage_id],
-            self.view_weight_nets[stage_id],
-            None,
-            False
+        cost_volume, view_weights = homography_warp(
+            features=image_features,
+            intrinsics=data["multires_intrinsics"][:,:,resolution_level],
+            extrinsics=data["poses"],
+            hypotheses=hypotheses,
+            group_channels=self.group_channels[resolution_level],
+            vwa_net=vwa_net,
+            view_weights=view_weights
         )
 
+        #### Store View Weights ####
+        data["view_weights"] = view_weights
+
         #### Cost Regularization ####
-        cost_volume = self.cost_reg[stage_id](cost_volume)
+        cost_volume = self.cost_reg[resolution_level](cost_volume)
         cost_volume = cost_volume.squeeze(1)
 
         # gather depth and subdivide depth hypotheses
@@ -133,15 +140,15 @@ class Network(nn.Module):
             depth = F.interpolate(depth, size=(self.height, self.width), mode="bilinear")
             confidence = F.interpolate(confidence, size=(self.height, self.width), mode="bilinear")
 
-        # # Depth Refinement
-        # ref_image =  data["images"][:,0]
-        # refined_depth = self.refiner(ref_image, depth)
+        # Depth Refinement
+        if final_iteration:
+            ref_image =  data["images"][:,0]
+            depth = self.refiner(ref_image, depth)
 
         output["hypotheses"] = hypotheses
         output["next_hypotheses"] = next_hypotheses
         output["cost_volume"] = cost_volume
         output["pred_hypo_index"] = pred_hypo_index
-        # output["final_depth"] = refined_depth
         output["final_depth"] = depth
         output["confidence"] = confidence
 

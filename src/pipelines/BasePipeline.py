@@ -158,6 +158,9 @@ class BasePipeline():
         T_max = self.cfg["training"]["epochs"]
         eta_min = self.cfg["optimizer"]["eta_min"]
         self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=T_max, eta_min=eta_min)
+        # T_max = self.cfg["training"]["epochs"]
+        # eta_min = self.cfg["optimizer"]["eta_min"]
+        # self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=self.optimizer, T_0=5, T_mult=2)
 
     def training(self):
         for epoch in range(self.cfg["training"]["epochs"]):
@@ -173,7 +176,7 @@ class BasePipeline():
             self.training_dataset.shuffle_and_subsample()
             self.validation_dataset.shuffle_and_subsample()
             
-            self.lr_scheduler.step()
+            self.lr_scheduler.step(epoch=epoch)
             torch.cuda.empty_cache()
 
         # save final model checkpoint

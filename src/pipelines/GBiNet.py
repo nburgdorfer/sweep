@@ -16,16 +16,19 @@ from src.networks.GBiNet import Network
 class Pipeline(BasePipeline):
     def __init__(self, cfg, log_path, model_name, training_scenes=[], validation_scenes=[], inference_scene=[]):
         super(Pipeline, self).__init__(cfg, log_path, model_name, training_scenes, validation_scenes, inference_scene)
-        self.stage_ids = self.cfg["model"]["stage_ids"]
+        self.resolution_levels = self.cfg["model"]["resolution_levels"]
         self.loss_weights = self.cfg["loss"]["weights"]
         self.confidence_iterations = self.cfg["model"]["confidence_iterations"]
+        self.stage_intervals = self.cfg["model"]["stage_intervals"]
+        self.current_resolution = 0
+        self.stage_training = self.cfg["model"]["stage_training"]
 
     def get_network(self):
         return Network(self.cfg).to(self.device)
 
-    def compute_loss(self, data, output, stage_id):
+    def compute_loss(self, data, output, resolution_level, final_iteration):
         loss = {}
-        target_depth = data["target_depths"][stage_id]
+        target_depth = data["target_depths"][resolution_level]
         target_labels, mask = build_labels(target_depth, output["hypotheses"])
         cost_volume = output["cost_volume"]
 
@@ -34,7 +37,7 @@ class Pipeline(BasePipeline):
         error = F.cross_entropy(cost_volume, target_labels, reduction='none')
         error *= mask
 
-        loss["total"] = (error.sum(dim=(1,2)) / (mask.sum(dim=(1,2))+1e-10)).mean() * self.loss_weights[stage_id]
+        loss["total"] = (error.sum(dim=(1,2)) / (mask.sum(dim=(1,2))+1e-10)).mean() * self.loss_weights[resolution_level]
         loss["cov_percent"] = (mask.sum() / (torch.where(target_depth > 0, 1, 0).sum()+1e-10))
         return loss
 
@@ -58,6 +61,13 @@ class Pipeline(BasePipeline):
             dataset = self.inference_dataset
             title_suffix = ""
         else:
+            if self.current_resolution >= len(self.stage_intervals):
+                self.stage_training = False
+
+            if self.stage_training:
+                if epoch >= self.stage_intervals[self.current_resolution]:
+                    self.current_resolution += 1
+
             if mode == "training":
                 self.model.train()
                 data_loader = self.training_data_loader
@@ -77,42 +87,43 @@ class Pipeline(BasePipeline):
                 "acc": 0.0
                 }
 
+        stage_counter = 0
+        current_max_res = 0
         with tqdm(data_loader, desc=f"GBiNet {mode}{title_suffix}", unit="batch") as loader:
             for batch_ind, data in enumerate(loader):
                 to_gpu(data, self.device)
                 
                 # build image features
-                data["hypotheses"] = [None]*(len(self.stage_ids))
+                data["hypotheses"] = [None]*(len(self.resolution_levels))
 
                 confidence = torch.zeros((self.batch_size, 1, dataset.H, dataset.W), dtype=torch.float32, device=self.device)
                 output = {}
                 loss = {}
-                for iteration, stage_id in enumerate(self.stage_ids):
-                    if mode == "training":
-                        self.optimizer.zero_grad()
-
-                    if iteration > epoch+1 and mode != "inference":
-                        break
+                num_stages = len(self.resolution_levels)
+                for iteration, resolution_level in enumerate(self.resolution_levels):
+                    if self.stage_training and (resolution_level > self.current_resolution) and (mode != "inference"):
+                        break                
 
                     # Run network forward pass
-                    output = self.model(data, stage_id=stage_id, iteration=iteration)
+                    output = self.model(data, resolution_level=resolution_level, iteration=iteration, final_iteration=(iteration==(num_stages-1)))
 
                     if iteration==0:
                         data["hypotheses"][iteration] = output["hypotheses"]
-                    if iteration < len(self.stage_ids)-1:
+                    if iteration < num_stages-1:
                         data["hypotheses"][iteration+1] = output["next_hypotheses"]
                     if iteration <= self.confidence_iterations:
                         confidence += output["confidence"]
 
                     if mode != "inference":
                         # Compute loss
-                        loss = self.compute_loss(data, output, stage_id)
+                        loss = self.compute_loss(data, output, resolution_level, final_iteration=(iteration==(num_stages-1)))
 
                         # Compute backward pass
                         if mode != "validation":
                             loss["total"].backward()
                             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg["optimizer"]["grad_clip"])
                             self.optimizer.step()
+                            self.optimizer.zero_grad()
 
                 # confidence average
                 output["confidence"] = confidence / self.confidence_iterations
@@ -134,7 +145,8 @@ class Pipeline(BasePipeline):
                             cover=f"{(sums['cov_percent']/(batch_ind+1))*100:6.2f}%",
                             mae=f"{(sums['mae']/(batch_ind+1)):6.2f}",
                             acc_1cm=f"{(sums['acc']/(batch_ind+1))*100:3.2f}%",
-                            max_memory=f"{(max_mem):2.3f}"
+                            max_memory=f"{(max_mem):2.3f}",
+                            current_resolution=f"{self.current_resolution:d}"
                             )
 
                     ## Log loss and statistics
