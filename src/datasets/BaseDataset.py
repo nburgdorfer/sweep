@@ -52,18 +52,18 @@ class BaseDataset(Dataset[dict[str, Any]]):
         self.K: dict[str,Any] = {}
         self.W = 0
         self.H = 0
-        self.total_samples, self.frame_count = self.build_samples()
+        self.samples, self.frame_count = self.build_samples()
 
-        if self.mode == "inference":
-            # use all samples during inference
-            self.samples = self.total_samples
-        else:
-            # shuffle and sub-sample during training
-            if self.mode=="training":
-                self.max_samples = self.cfg["training"]["max_training_samples"]
-            elif self.mode=="validation":
-                self.max_samples = self.cfg["training"]["max_val_samples"]
-            self.shuffle_and_subsample()
+        # if self.mode == "inference":
+        #     # use all samples during inference
+        #     self.samples = self.total_samples
+        # else:
+        #     # shuffle and sub-sample during training
+        #     if self.mode=="training":
+        #         self.max_samples = self.cfg["training"]["max_training_samples"]
+        #     elif self.mode=="validation":
+        #         self.max_samples = self.cfg["training"]["max_val_samples"]
+        #     self.shuffle_and_subsample()
 
     def build_samples(self) -> tuple[list[dict[str,Any]], int]:
         raise NotImplementedError()
