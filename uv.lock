@@ -193,19 +193,23 @@ wheels = [
 
 [[package]]
 name = "cvtkit"
-version = "0.0.44"
+version = "0.0.50"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "open3d" },
     { name = "opencv-python" },
+    { name = "plyfile" },
     { name = "scikit-image" },
     { name = "scikit-learn" },
     { name = "scipy" },
+    { name = "torch", version = "2.4.0", source = { registry = "https://download.pytorch.org/whl/cu124" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "torch", version = "2.4.0+cu124", source = { registry = "https://download.pytorch.org/whl/cu124" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
+    { name = "torchvision" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/36/86/4b47a288033e81b33163e85eb1c0f0c1903d52eb936090731cbae48dc950/cvtkit-0.0.44.tar.gz", hash = "sha256:3009c5a2862d38d9bd38dbcc913a5b14ee2c350d274f873927e953cbed6c2be1", size = 78366, upload-time = "2025-09-16T21:51:49.392Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/8e/691086753d374d7ee7d7fdac09d4ca902adfac22067f507d3f45a18e727b/cvtkit-0.0.50.tar.gz", hash = "sha256:16caff511cea938c85575d66a834f21afd99a291608aea9ff19dd69cbc297596", size = 79204, upload-time = "2025-09-17T22:45:36.061Z" }
 
 [[package]]
 name = "cycler"
@@ -1487,7 +1491,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cvtkit", specifier = "==0.0.44" },
+    { name = "cvtkit", specifier = "==0.0.50" },
     { name = "h5py", specifier = "==3.14.0" },
     { name = "matplotlib", specifier = ">=3.10.5" },
     { name = "numpy", specifier = ">=2.3.2" },

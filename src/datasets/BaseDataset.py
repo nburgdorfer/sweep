@@ -6,7 +6,7 @@ from typing import Any
 from numpy.typing import NDArray
 
 from cvtkit.io import read_pfm
-from cvtkit.camera import compute_baselines_, intrinsic_pyramid_, scale_intrinsics_, crop_intrinsics_
+from cvtkit.camera import compute_baselines, intrinsic_pyramid, scale_intrinsics, crop_intrinsics
 from cvtkit.common import build_depth_pyramid, normalize, crop_image
 
 def build_dataset(cfg: dict[Any, Any], mode: str, scenes: list[str]):
@@ -83,29 +83,25 @@ class BaseDataset(Dataset[dict[str, Any]]):
         image = image[(self.crop_h//2):h-(self.crop_h//2),(self.crop_w//2):w-(self.crop_w//2), :]
         if scale:
             image = cv2.resize(image, (self.W, self.H), interpolation=cv2.INTER_LINEAR)
-        image = normalize(image, mean=0.5, std=0.5)
+        image = normalize(image)
         image = np.moveaxis(image, [0,1,2], [1,2,0])
         return image.astype(np.float32)
 
     def get_depth(self, depth_file: str, scale: bool=True) -> NDArray[Any]:
         if (depth_file[-3:] == "pfm"):
             depth = read_pfm(depth_file)
-        elif (depth_file[-3:] == "png") and self.png_depth_scale is not None:
+        elif self.png_depth_scale is not None:
             depth = cv2.imread(depth_file, 2) / self.png_depth_scale
+        else:
+            raise Exception(f"ERROR: If depth file is not a 'pfm', an rgb->depth scale must be provided.")
 
         # crop and resize depth
         h,w = depth.shape
         depth = depth[(self.crop_h//2):h-(self.crop_h//2),(self.crop_w//2):w-(self.crop_w//2)]
         if scale:
-            depth = cv2.resize(depth, (self.W,self.H), interpolation=cv2.INTER_LINEAR)
+            depth = cv2.resize(src=depth, dsize=(self.W,self.H), interpolation=cv2.INTER_LINEAR)
         depth = depth.reshape(1, depth.shape[0], depth.shape[1])
         return depth.astype(np.float32)
-
-    def shuffle_and_subsample(self):
-        np.random.shuffle(self.total_samples)
-        # num_samples = min(len(self.total_samples), self.max_samples)
-        num_samples = len(self.total_samples)
-        self.samples = self.total_samples[:num_samples]
 
     def __len__(self):
         return len(self.samples)
@@ -122,9 +118,9 @@ class BaseDataset(Dataset[dict[str, Any]]):
         if self.random_crop:
             crop_row = np.random.randint(0, (self.cfg["camera"]["height"] - self.crop_h) - self.H)
             crop_col = np.random.randint(0, (self.cfg["camera"]["width"]- self.crop_w) - self.W)
-            K = crop_intrinsics_(K, crop_row, crop_col)
+            K = crop_intrinsics(K, crop_row, crop_col)
         else:
-            K = scale_intrinsics_(K, scale=self.scale)
+            K = scale_intrinsics(K, scale=self.scale)
 
         images = [None]*self.num_frame
         poses = [None]*self.num_frame
@@ -138,14 +134,13 @@ class BaseDataset(Dataset[dict[str, Any]]):
 
             if self.random_crop:
                 images[i] = crop_image(images[i], crop_row, crop_col, self.scale)
-                # images[i] = images[i][(self.crop_h//2):h-(self.crop_h//2),(self.crop_w//2):w-(self.crop_w//2), :]
                 target_depths[i] = crop_image(target_depths[i], crop_row, crop_col, self.scale)
         images = np.asarray(images, dtype=np.float32)
         poses = np.asarray(poses, dtype=np.float32)
         target_depths = np.asarray(target_depths, dtype=np.float32)
 
         # compute min and max camera baselines
-        min_baseline, max_baseline = compute_baselines_(poses)
+        min_baseline, max_baseline = compute_baselines(poses)
 
         # load data dict
         data = {}
@@ -166,7 +161,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
 
             multires_intrinsics = []
             for i in range(self.num_frame):
-                multires_intrinsics.append(intrinsic_pyramid_(K, self.resolution_levels)[::-1])
+                multires_intrinsics.append(intrinsic_pyramid(K, self.resolution_levels)[::-1])
             
             data["multires_intrinsics"] = np.stack(multires_intrinsics).astype(np.float32)
 
