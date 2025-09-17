@@ -111,8 +111,8 @@ class Pipeline(BasePipeline):
                         data["hypotheses"][iteration] = output["hypotheses"]
                     if iteration < num_stages-1:
                         data["hypotheses"][iteration+1] = output["next_hypotheses"]
-                    if iteration <= self.confidence_iterations:
-                        confidence += output["confidence"]
+                    # if iteration <= self.confidence_iterations:
+                    confidence += output["confidence"]
 
                     if mode != "inference":
                         # Compute loss
