@@ -171,10 +171,6 @@ class BasePipeline():
             # save model checkpoint
             ckpt_file = os.path.join(self.ckpt_path, f"ckpt_{epoch:04d}.pt") 
             save_ckpt(self.model, ckpt_file)
-
-            # shuffle scenes in data loaders
-            self.training_dataset.shuffle_and_subsample()
-            self.validation_dataset.shuffle_and_subsample()
             
             self.lr_scheduler.step(epoch=epoch)
             torch.cuda.empty_cache()
