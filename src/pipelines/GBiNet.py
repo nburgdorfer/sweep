@@ -18,7 +18,6 @@ class Pipeline(BasePipeline):
         super(Pipeline, self).__init__(cfg, log_path, model_name, training_scenes, validation_scenes, inference_scene)
         self.resolution_stages = self.cfg["model"]["resolution_stages"]
         self.loss_weights = self.cfg["loss"]["weights"]
-        self.confidence_iterations = self.cfg["model"]["confidence_iterations"]
         self.stage_intervals = self.cfg["model"]["stage_intervals"]
         self.current_resolution = 0
         self.stage_training = self.cfg["model"]["stage_training"]
@@ -111,7 +110,6 @@ class Pipeline(BasePipeline):
                         data["hypotheses"][iteration] = output["hypotheses"]
                     if iteration < num_stages-1:
                         data["hypotheses"][iteration+1] = output["next_hypotheses"]
-                    # if iteration <= self.confidence_iterations:
                     confidence += output["confidence"]
 
                     if mode != "inference":
@@ -126,7 +124,7 @@ class Pipeline(BasePipeline):
                             self.optimizer.zero_grad()
 
                 # confidence average
-                output["confidence"] = confidence / self.confidence_iterations
+                output["confidence"] = confidence
 
                 stats = {}
                 if mode != "inference":

@@ -1,7 +1,7 @@
-# data_path: /home/nburgdor/data/DTU/
-# output_path: /home/nburgdor/Results/DTU/GBiNet/
-data_path: /mnt/Drive2/DTU/
-output_path: /mnt/Drive1/Results/DTU/GBiNet/
+data_path: /home/nburgdor/data/DTU/
+output_path: /home/nburgdor/Results/DTU/GBiNet/
+# data_path: /mnt/Drive2/DTU/
+# output_path: /mnt/Drive1/Results/DTU/GBiNet/
 device: cuda:0
 seed: 43
 num_workers: 4
@@ -30,7 +30,6 @@ loss:
 model:
     feature_channels: [8, 16, 32, 64] # fine -> coarse
     group_channels: [4,8,8,8] # fine -> coarse
-    confidence_iterations: 6 # number of iterations to accumulate confidence
     resolution_stages: [0,0,1,1,2,2,3,3] # The resolution stages for each iteration
     stage_training: True
     stage_intervals: [2,4,6]
