@@ -241,8 +241,10 @@ def dtu_point_eval(cfg, scan, method):
     est_ply = read_point_cloud(est_ply_path)
     est_ply = est_ply.voxel_down_sample(min_point_dist)
 
-    gt_ply_filename = "stl{:03d}_total.ply".format(scan_num)
-    gt_ply_path = os.path.join(eval_data_path, "Points", f"stl_{resolution}", gt_ply_filename)
+    if resolution == "dense":
+        gt_ply_path = os.path.join(cfg["data_path"], "Point_Clouds_Dense", f"scan{scan_num:03d}.ply")
+    else:
+        gt_ply_path = os.path.join(cfg["data_path"], "Point_Clouds_Sparse", f"stl{scan_num:03d}_total.ply")
     gt_ply = read_point_cloud(gt_ply_path)
 
     # build points filter based on input mask
