@@ -32,11 +32,11 @@ model:
     group_channels: [4,8,8,8] # fine -> coarse
     resolution_stages: [0,0,1,1,2,2,3,3] # The resolution stages for each iteration
     stage_training: True
-    stage_intervals: [2,4,6]
+    stage_intervals: [5,10,15]
 
 optimizer:
     grad_clip: 100.0
-    learning_rate: 0.00003
+    learning_rate: 0.0003
     eta_min: 0.0000001
 
 point_cloud:
@@ -54,7 +54,7 @@ point_cloud:
 training:
     batch_size: 8
     ckpt_file: 
-    epochs: 30
+    epochs: 50
     frame_spacing: 1
     max_training_samples:
     max_val_samples:
