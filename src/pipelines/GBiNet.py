@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 from cvtkit.common import to_gpu, build_labels
 from cvtkit.visualization import visualize_mvs
+from cvtkit.metrics import RMSE
 
 ## Custom libraries
 from src.pipelines.BasePipeline import BasePipeline
@@ -31,12 +32,17 @@ class Pipeline(BasePipeline):
         target_labels, mask = build_labels(target_depth, output["hypotheses"])
         cost_volume = output["cost_volume"]
 
-        b, _, h, w = target_depth.shape
-
         error = F.cross_entropy(cost_volume, target_labels, reduction='none')
         error *= mask
+        error = (error.sum(dim=(1,2)) / (mask.sum(dim=(1,2))+1e-10)).mean()
 
-        loss["total"] = (error.sum(dim=(1,2)) / (mask.sum(dim=(1,2))+1e-10)).mean() * self.loss_weights[resolution_level]
+        if final_iteration:
+            final_depth = output["final_depth"]
+            rmse = RMSE(final_depth, target_depth, mask=torch.where(target_depth>0, 1.0, 0.0))
+            rmse = rmse * self.cfg["loss"]["rmse_weight"]
+            error += rmse
+
+        loss["total"] = error * self.loss_weights[resolution_level]
         loss["cov_percent"] = (mask.sum() / (torch.where(target_depth > 0, 1, 0).sum()+1e-10))
         return loss
 
@@ -85,9 +91,7 @@ class Pipeline(BasePipeline):
                 "mae": 0.0,
                 "acc": 0.0
                 }
-
-        stage_counter = 0
-        current_max_res = 0
+        
         with tqdm(data_loader, desc=f"GBiNet {mode}{title_suffix}", unit="batch") as loader:
             for batch_ind, data in enumerate(loader):
                 to_gpu(data, self.device)
@@ -124,7 +128,7 @@ class Pipeline(BasePipeline):
                             self.optimizer.zero_grad()
 
                 # confidence average
-                output["confidence"] = confidence
+                output["confidence"] = confidence / num_stages
 
                 stats = {}
                 if mode != "inference":

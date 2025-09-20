@@ -3,7 +3,7 @@ import numpy as np
 import sys
 from tqdm import tqdm
 
-from typing import Any
+from typing import Any, Dict
 from numpy.typing import NDArray
 
 from cvtkit.io import read_single_cam_sfm, read_cluster_list
@@ -160,7 +160,7 @@ class DTU(BaseDataset):
             poses.append(pose)
         return poses
 
-    def get_all_depths(self, scale: bool) -> NDArray[Any]:
+    def get_all_depths(self, scale: bool) -> Dict[int, NDArray[Any]]:
         gt_depth_files = os.listdir(self.gt_depth_path)
         gt_depth_files = [os.path.join(self.gt_depth_path, gdf) for gdf in gt_depth_files if os.path.isfile(os.path.join(self.gt_depth_path, gdf))]
         gt_depth_files.sort()
