@@ -155,9 +155,13 @@ class BasePipeline():
         self.optimizer = optim.AdamW(self.parameters_to_train, lr=rate, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01)
 
     def build_scheduler(self):
-        T_max = self.cfg["training"]["epochs"]
-        eta_min = self.cfg["optimizer"]["eta_min"]
-        self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=T_max, eta_min=eta_min)
+        # ### MultiStepLR
+        self.lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer=self.optimizer, milestones=[10, 12, 14], gamma=0.5)
+        # ### CosineAnnealingLR
+        # T_max = self.cfg["training"]["epochs"]
+        # eta_min = self.cfg["optimizer"]["eta_min"]
+        # self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=T_max, eta_min=eta_min)
+        # ### CosineAnnealingWarmRestarts
         # T_max = self.cfg["training"]["epochs"]
         # eta_min = self.cfg["optimizer"]["eta_min"]
         # self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=self.optimizer, T_0=5, T_mult=2)

@@ -20,8 +20,8 @@ class Pipeline(BasePipeline):
         self.resolution_stages = self.cfg["model"]["resolution_stages"]
         self.loss_weights = self.cfg["loss"]["weights"]
         self.stage_intervals = self.cfg["model"]["stage_intervals"]
-        self.current_resolution = 0
         self.stage_training = self.cfg["model"]["stage_training"]
+        self.current_resolution = 0 if self.stage_training else len(self.stage_intervals)
 
     def get_network(self):
         return Network(self.cfg).to(self.device)
@@ -36,11 +36,11 @@ class Pipeline(BasePipeline):
         error *= mask
         error = (error.sum(dim=(1,2)) / (mask.sum(dim=(1,2))+1e-10)).mean()
 
-        if final_iteration:
-            final_depth = output["final_depth"]
-            rmse = RMSE(final_depth, target_depth, mask=torch.where(target_depth>0, 1.0, 0.0))
-            rmse = rmse * self.cfg["loss"]["rmse_weight"]
-            error += rmse
+        # if final_iteration:
+        #     final_depth = output["final_depth"]
+        #     rmse = RMSE(final_depth, target_depth, mask=torch.where(target_depth>0, 1.0, 0.0))
+        #     rmse = rmse * self.cfg["loss"]["rmse_weight"]
+        #     error += rmse
 
         loss["total"] = error * self.loss_weights[resolution_level]
         loss["cov_percent"] = (mask.sum() / (torch.where(target_depth > 0, 1, 0).sum()+1e-10))
@@ -114,7 +114,7 @@ class Pipeline(BasePipeline):
                         data["hypotheses"][iteration] = output["hypotheses"]
                     if iteration < num_stages-1:
                         data["hypotheses"][iteration+1] = output["next_hypotheses"]
-                    confidence += output["confidence"]
+                    confidence += output["confidence"].detach()
 
                     if mode != "inference":
                         # Compute loss
