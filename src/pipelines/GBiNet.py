@@ -150,7 +150,7 @@ class Pipeline(BasePipeline):
                         data["hypotheses"][iteration] = output["hypotheses"]
                     if iteration < num_stages - 1:
                         data["hypotheses"][iteration + 1] = output["next_hypotheses"]
-                    
+
                     if mode == "inference":
                         confidence += output["confidence"].detach()
                     else:
@@ -170,7 +170,7 @@ class Pipeline(BasePipeline):
                                 self.cfg["optimizer"]["grad_clip"],
                             )
                             self.optimizer.step()
-                            self.optimizer.zero_grad()                    
+                            self.optimizer.zero_grad()
 
                 stats = {}
                 if mode != "inference":
