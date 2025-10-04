@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from cvtkit.geometry import uniform_hypothesis, homography_warp
 
-from src.components.encoders import FPN, FPN_v2
+from src.components.encoders import FPN
 from src.components.refiners import BasicRefiner
 from src.components.regularizers import CostRegNet, PixelwiseNet
 
@@ -25,16 +25,12 @@ class Network(nn.Module):
         self.height, self.width = self.cfg["H"], self.cfg["W"]
 
         #### Image Feature Encoder
-        # self.feature_encoder = FPN(
-        #                 in_channels=3,
-        #                 out_channels=self.feature_channels,
-        #                 base_channels=8,
-        #                 block_size=4,
-        #                 levels=4,
-        #                 out_levels=4
-        #             )
-        self.feature_encoder = FPN_v2(
-            in_channels=3, out_channels=self.feature_channels, base_channels=8
+        self.feature_encoder = FPN(
+            in_channels=3,
+            out_channels=self.feature_channels,
+            base_channels=8,
+            levels=4,
+            block_size=3,
         )
 
         #### Cost Volume Regularizers
