@@ -53,7 +53,6 @@ class Network(nn.Module):
         # self.refiner = BasicRefiner(in_channels=4, c=8)
 
     def build_features(self, data, resolution_level):
-        print(resolution_level)
         views = data["images"].shape[1]
         images = data["images"]
 
@@ -105,13 +104,12 @@ class Network(nn.Module):
 
         return next_hypotheses
 
-    def forward(self, data, resolution_level, iteration, final_iteration):
+    def forward(self, data, resolution_level, iteration, final_iteration, mode):
         batch_size, _, _, height, width = data["images"].shape
         output = {}
 
         # build image features
         image_features = self.build_features(data, resolution_level)
-        print(image_features[0].shape)
         batch_size, _, height, width = image_features[0].shape
 
         if iteration == 0:
@@ -152,30 +150,34 @@ class Network(nn.Module):
             hypotheses, pred_hypo_index, iteration
         )
 
-        # upsample depth and confidence maps to full resolution
-        with torch.no_grad():
-            depth = torch.gather(hypotheses, dim=1, index=pred_hypo_index.unsqueeze(1))
-            confidence = torch.max(
-                torch.softmax(cost_volume, dim=1), dim=1, keepdim=True
-            )[0]
-            if (height, width) != (self.height, self.width):
-                depth = F.interpolate(
-                    depth, size=(self.height, self.width), mode="bilinear"
-                )
-                confidence = F.interpolate(
-                    confidence, size=(self.height, self.width), mode="bilinear"
-                )
-
-        # # Depth Refinement
-        # if final_iteration:
-        #     ref_image =  data["images"][:,0]
-        #     depth = self.refiner(ref_image, depth)
-
         output["hypotheses"] = hypotheses
         output["next_hypotheses"] = next_hypotheses
         output["cost_volume"] = cost_volume
         output["pred_hypo_index"] = pred_hypo_index
-        output["final_depth"] = depth
-        output["confidence"] = confidence
+
+        # upsample depth and confidence maps to full resolution
+        if mode == "inference":
+            with torch.no_grad():
+                depth = torch.gather(
+                    hypotheses, dim=1, index=pred_hypo_index.unsqueeze(1)
+                )
+                confidence = torch.max(
+                    torch.softmax(cost_volume, dim=1), dim=1, keepdim=True
+                )[0]
+                if (height, width) != (self.height, self.width):
+                    depth = F.interpolate(
+                        depth, size=(self.height, self.width), mode="bilinear"
+                    )
+                    confidence = F.interpolate(
+                        confidence, size=(self.height, self.width), mode="bilinear"
+                    )
+
+            # # Depth Refinement
+            # if final_iteration:
+            #     ref_image =  data["images"][:,0]
+            #     depth = self.refiner(ref_image, depth)
+
+            output["final_depth"] = depth
+            output["confidence"] = confidence
 
         return output

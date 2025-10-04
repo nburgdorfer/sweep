@@ -143,6 +143,7 @@ class Pipeline(BasePipeline):
                         resolution_level=resolution_level,
                         iteration=iteration,
                         final_iteration=(iteration == (num_stages - 1)),
+                        mode=mode,
                     )
 
                     if iteration == 0:
