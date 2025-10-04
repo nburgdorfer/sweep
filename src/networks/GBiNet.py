@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from cvtkit.geometry import uniform_hypothesis, homography_warp
 
-from src.components.encoders import FPN
+from src.components.encoders import FPN, FPN_v2
 from src.components.refiners import BasicRefiner
 from src.components.regularizers import CostRegNet, PixelwiseNet
 
@@ -24,13 +24,18 @@ class Network(nn.Module):
         self.height, self.width = self.cfg["H"], self.cfg["W"]
 
         #### Image Feature Encoder
-        self.feature_encoder = FPN(
+        # self.feature_encoder = FPN(
+        #                 in_channels=3,
+        #                 out_channels=self.feature_channels,
+        #                 base_channels=8,
+        #                 block_size=4,
+        #                 levels=4,
+        #                 out_levels=4
+        #             )
+        self.feature_encoder = FPN_v2(
                         in_channels=3,
                         out_channels=self.feature_channels,
-                        base_channels=8,
-                        block_size=4,
-                        levels=4,
-                        out_levels=4
+                        base_channels=8
                     )
 
         #### Cost Volume Regularizers
@@ -104,29 +109,15 @@ class Network(nn.Module):
         else:
             hypotheses = data["hypotheses"][iteration].unsqueeze(1)
 
-        view_weights = data.get("view_weights", None)
-        if view_weights is None:
-            vwa_net = self.view_weight_nets[resolution_level]
-        else:
-            vwa_net = None
-            
-            # turn off gradient for pre-computed view weights
-            for i, vw in enumerate(view_weights):
-                view_weights[i] = vw.detach()
-
         #### Build cost volume ####
-        cost_volume, view_weights = homography_warp(
+        cost_volume = homography_warp(
             features=image_features,
             intrinsics=data["multires_intrinsics"][:,:,resolution_level],
             extrinsics=data["poses"],
             hypotheses=hypotheses,
             group_channels=self.group_channels[resolution_level],
-            vwa_net=vwa_net,
-            view_weights=view_weights
+            vwa_net=self.view_weight_nets[resolution_level],
         )
-
-        #### Store View Weights ####
-        data["view_weights"] = view_weights
 
         #### Cost Regularization ####
         cost_volume = self.cost_reg[resolution_level](cost_volume)
@@ -135,14 +126,15 @@ class Network(nn.Module):
         # gather depth and subdivide depth hypotheses
         pred_hypo_index = torch.argmax(cost_volume, dim=1).to(torch.int64)
         hypotheses = hypotheses.squeeze(1)
-        depth = torch.gather(hypotheses, dim=1, index=pred_hypo_index.unsqueeze(1))
-        confidence = torch.max(torch.softmax(cost_volume, dim=1), dim=1, keepdim=True)[0]
         next_hypotheses = self.subdivide_hypotheses(hypotheses, pred_hypo_index, iteration)
 
         # upsample depth and confidence maps to full resolution
-        if (height, width) != (self.height, self.width):
-            depth = F.interpolate(depth, size=(self.height, self.width), mode="bilinear")
-            confidence = F.interpolate(confidence, size=(self.height, self.width), mode="bilinear")
+        with torch.no_grad():
+            depth = torch.gather(hypotheses, dim=1, index=pred_hypo_index.unsqueeze(1))
+            confidence = torch.max(torch.softmax(cost_volume, dim=1), dim=1, keepdim=True)[0]
+            if (height, width) != (self.height, self.width):
+                depth = F.interpolate(depth, size=(self.height, self.width), mode="bilinear")
+                confidence = F.interpolate(confidence, size=(self.height, self.width), mode="bilinear")
 
         # # Depth Refinement
         # if final_iteration:

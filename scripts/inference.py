@@ -49,18 +49,18 @@ avg_fscore = np.zeros((len(scenes)))
 for i, scene in enumerate(scenes):
     print(f"\n----Running MVS on {scene}----")
     pipeline = Pipeline(cfg=cfg, log_path=ARGS.log_path, model_name=ARGS.model, inference_scene=[scene])
-    pipeline.inference()
+    # pipeline.inference()
 
-    ####### 2D EVALUATION ####
-    print("\n---Evaluating depth maps---")
-    paths = {
-            "depth": pipeline.depth_path,
-            "confidence":pipeline.conf_path,
-            "rgb": pipeline.image_path}
-    mae, auc, percentages = eval_2d(paths, pipeline.inference_dataset, pipeline.vis_path, scale=False)
-    avg_mae[i] = mae
-    avg_auc[i] = auc
-    avg_percentages[i] = percentages
+    # ####### 2D EVALUATION ####
+    # print("\n---Evaluating depth maps---")
+    # paths = {
+    #         "depth": pipeline.depth_path,
+    #         "confidence":pipeline.conf_path,
+    #         "rgb": pipeline.image_path}
+    # mae, auc, percentages = eval_2d(paths, pipeline.inference_dataset, pipeline.vis_path, scale=False)
+    # avg_mae[i] = mae
+    # avg_auc[i] = auc
+    # avg_percentages[i] = percentages
 
     #### 3D EVALUATION ####
     print("\n---Evaluating point cloud---")

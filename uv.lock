@@ -193,7 +193,7 @@ wheels = [
 
 [[package]]
 name = "cvtkit"
-version = "0.0.53"
+version = "0.0.54"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "matplotlib" },
@@ -209,7 +209,7 @@ dependencies = [
     { name = "torchvision" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9a/cb/0c44ab4e24b7135d457e77757de4cfd613d522ca39b6f854c660c3e1cc84/cvtkit-0.0.53.tar.gz", hash = "sha256:1388ad5e9ad275e1367efbf29e69478c84da810a67f747694dd96e581663b4e7", size = 79284, upload-time = "2025-09-18T23:51:52.263Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4e/0f/4594bab4e494f3de8157156dbb755ce5858c43fd199abfbc7e946a30b7ca/cvtkit-0.0.54.tar.gz", hash = "sha256:95df0cb8d146bba7cd5166169ffb2ca6f69255917942ff365fb43b8a1b47bbd5", size = 79245, upload-time = "2025-10-03T23:17:41.91Z" }
 
 [[package]]
 name = "cycler"
@@ -827,7 +827,7 @@ name = "nvidia-cudnn-cu12"
 version = "9.1.0.70"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "python_full_version >= '3.13' or platform_machine != 'aarch64' or platform_python_implementation != 'CPython' or sys_platform != 'linux'" },
+    { name = "nvidia-cublas-cu12", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9f/fd/713452cd72343f682b1c7b9321e23829f00b842ceaedcda96e742ea0b0b3/nvidia_cudnn_cu12-9.1.0.70-py3-none-manylinux2014_x86_64.whl", hash = "sha256:165764f44ef8c61fcdfdfdbe769d687e06374059fbb388b6c89ecb0e28793a6f", size = 664752741, upload-time = "2024-04-22T15:24:15.253Z" },
@@ -854,9 +854,9 @@ name = "nvidia-cusolver-cu12"
 version = "11.6.0.99"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "python_full_version >= '3.13' or platform_machine != 'aarch64' or platform_python_implementation != 'CPython' or sys_platform != 'linux'" },
-    { name = "nvidia-cusparse-cu12", marker = "python_full_version >= '3.13' or platform_machine != 'aarch64' or platform_python_implementation != 'CPython' or sys_platform != 'linux'" },
-    { name = "nvidia-nvjitlink-cu12", marker = "python_full_version >= '3.13' or platform_machine != 'aarch64' or platform_python_implementation != 'CPython' or sys_platform != 'linux'" },
+    { name = "nvidia-cublas-cu12", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "nvidia-cusparse-cu12", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/6f/692057afbe7cf0a17b7bf26065b833d45a0a1b2eaa51b43deb07295b8a83/nvidia_cusolver_cu12-11.6.0.99-py3-none-manylinux2014_x86_64.whl", hash = "sha256:30693d3865ae3f5a6aacf46e42549fb2d1fbb15b0189bc14fc0b2894e173769f", size = 128402308, upload-time = "2024-03-06T01:15:51.544Z" },
@@ -867,7 +867,7 @@ name = "nvidia-cusparse-cu12"
 version = "12.3.0.142"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "python_full_version >= '3.13' or platform_machine != 'aarch64' or platform_python_implementation != 'CPython' or sys_platform != 'linux'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/89/f7a823867068550f8908c469a66bb2dc8ea60ddcdc7f45b99a919a7a836e/nvidia_cusparse_cu12-12.3.0.142-py3-none-manylinux2014_x86_64.whl", hash = "sha256:364106d1d9825901dc70fb7d19ef6fdd0f534627b824abfea494abe319c1402a", size = 207454570, upload-time = "2024-03-06T01:16:17.757Z" },
@@ -1504,7 +1504,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cvtkit", specifier = "==0.0.53" },
+    { name = "cvtkit", specifier = "==0.0.54" },
     { name = "h5py", specifier = "==3.14.0" },
     { name = "matplotlib", specifier = ">=3.10.5" },
     { name = "numpy", specifier = ">=2.3.2" },
@@ -1696,7 +1696,7 @@ name = "triton"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock", marker = "python_full_version >= '3.13' or platform_machine != 'aarch64' or platform_python_implementation != 'CPython' or sys_platform != 'linux'" },
+    { name = "filelock", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fe/7b/7757205dee3628f75e7991021d15cd1bd0c9b044ca9affe99b50879fc0e1/triton-3.0.0-1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:34e509deb77f1c067d8640725ef00c5cbfcb2052a1a3cb6a6d343841f92624eb", size = 209464695, upload-time = "2024-07-19T20:57:22.532Z" },

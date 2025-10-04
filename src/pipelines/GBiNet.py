@@ -30,12 +30,15 @@ class Pipeline(BasePipeline):
         loss = {}
         target_depth = data["target_depths"][resolution_level]
         target_labels, mask = build_labels(target_depth, output["hypotheses"])
-        cost_volume = output["cost_volume"]
+        cost_volume = output["cost_volume"] # [B, C, H, W]
 
-        error = F.cross_entropy(cost_volume, target_labels, reduction='none')
-        error *= mask
-        error = (error.sum(dim=(1,2)) / (mask.sum(dim=(1,2))+1e-10)).mean()
+        cost_volume = cost_volume.permute(0,2,3,1) # [B, H, W, C]
+        cost_volume = cost_volume[mask>0] # [B*H*W, C]
+        target_labels = target_labels[mask>0] # [B*H*W]
 
+        error = F.cross_entropy(cost_volume, target_labels, reduction='mean')
+
+        # # compute depth rmse loss on final resolution depth map
         # if final_iteration:
         #     final_depth = output["final_depth"]
         #     rmse = RMSE(final_depth, target_depth, mask=torch.where(target_depth>0, 1.0, 0.0))
@@ -128,7 +131,7 @@ class Pipeline(BasePipeline):
                             self.optimizer.zero_grad()
 
                 # confidence average
-                output["confidence"] = confidence / num_stages
+                output["confidence"] = confidence.div_(num_stages)
 
                 stats = {}
                 if mode != "inference":

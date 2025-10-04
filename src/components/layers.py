@@ -16,11 +16,12 @@ class Conv2d(nn.Module):
             stride:int|tuple[int,int]=1,
             padding:int|tuple[int,int]=1,
             normalization:dict[str, Any] | None={"type": "batch"},
-            nonlinearity:dict[str, Any] | None={"type": "relu"}
+            nonlinearity:dict[str, Any] | None={"type": "relu"},
+            bias=True,
         ):
         super(Conv2d, self).__init__()
 
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=(normalization=="none"))
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=(normalization is None and bias))
 
         if normalization is not None:
             if normalization["type"]=="batch":

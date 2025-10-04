@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.components.layers import Conv2d, Conv3d, ConvTranspose3d, mlp
+from src.components.layers import Conv2d, ConvTranspose2d, Conv3d, ConvTranspose3d, mlp
 
 class BasicEncoder(nn.Module):
     def __init__(self, in_channels, c, out_channels, decode=False):
@@ -54,7 +54,7 @@ class FPN(nn.Module):
                  in_channels,
                  out_channels,
                  base_channels=8,
-                 block_size=4,
+                 block_size=3,
                  levels=4,
                  out_levels=4,
                  low_res_first=True
@@ -88,7 +88,7 @@ class FPN(nn.Module):
 
         ### UP Convolution Layers ###
         self.up_conv = nn.ModuleList()
-        conv_0 = [Conv2d(in_channels=in_channels, out_channels=hidden_channels[0], kernel_size=5, padding=2)]
+        conv_0 = [Conv2d(in_channels=in_channels, out_channels=hidden_channels[0], kernel_size=3, padding=1)]
         for _ in range (1, block_size):
             conv_0.append(Conv2d(in_channels=hidden_channels[0], out_channels=hidden_channels[0], kernel_size=3, padding=1))
         self.up_conv.append(nn.Sequential(*nn.ModuleList(conv_0)))
@@ -148,6 +148,69 @@ class FPN(nn.Module):
         
         return out_features
 
+class FPN_v2(nn.Module):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 base_channels=8,
+                 ):
+        """
+        Args:
+            in_channels: The expected channel size for the input data.
+            out_channels: The channel size for the output features.
+            base_channels: The base hidden channel size inside the encoder.
+        """
+        super(FPN_v2, self).__init__()
+
+        self.conv0 = nn.Sequential(
+            Conv2d(in_channels=in_channels, out_channels=base_channels, kernel_size=3, padding=1),
+            Conv2d(in_channels=base_channels, out_channels=base_channels, kernel_size=3, padding=1),
+        )
+
+        self.conv1 = nn.Sequential(
+            Conv2d(in_channels=base_channels, out_channels=base_channels*2, kernel_size=5, padding=2, stride=2),
+            Conv2d(in_channels=base_channels*2, out_channels=base_channels*2, kernel_size=3, padding=1),
+            Conv2d(in_channels=base_channels*2, out_channels=base_channels*2, kernel_size=3, padding=1),
+        )
+
+        self.conv2 = nn.Sequential(
+            Conv2d(in_channels=base_channels*2, out_channels=base_channels*4, kernel_size=5, padding=2, stride=2),
+            Conv2d(in_channels=base_channels*4, out_channels=base_channels*4, kernel_size=3, padding=1),
+            Conv2d(in_channels=base_channels*4, out_channels=base_channels*4, kernel_size=3, padding=1),
+        )
+
+        self.conv3 = nn.Sequential(
+            Conv2d(in_channels=base_channels*4, out_channels=base_channels*8, kernel_size=5, padding=2, stride=2),
+            Conv2d(in_channels=base_channels*8, out_channels=base_channels*8, kernel_size=3, padding=1),
+            Conv2d(in_channels=base_channels*8, out_channels=base_channels*8, kernel_size=3, padding=1),
+        )
+
+        self.conv_out = nn.ModuleList()
+        self.conv_out.append(Conv2d(base_channels * 2, out_channels[0], normalization=None, nonlinearity=None, bias=False))
+        self.conv_out.append(Conv2d(base_channels * 4, out_channels[1], normalization=None, nonlinearity=None, bias=False))
+        self.conv_out.append(Conv2d(base_channels * 8, out_channels[2], normalization=None, nonlinearity=None, bias=False))
+        self.conv_out.append(Conv2d(base_channels * 8, out_channels[3], normalization=None, nonlinearity=None, bias=False))
+
+        self.conv_inner = nn.ModuleList()
+        self.conv_inner.append(Conv2d(base_channels, base_channels * 2, normalization=None, nonlinearity=None, bias=True))
+        self.conv_inner.append(Conv2d(base_channels * 2, base_channels * 4, normalization=None, nonlinearity=None, bias=True))
+        self.conv_inner.append(Conv2d(base_channels * 4, base_channels * 8, normalization=None, nonlinearity=None, bias=True))
+
+    def forward(self, tensor):
+        conv0 = self.conv0(tensor)
+        conv1 = self.conv1(conv0)
+        conv2 = self.conv2(conv1)
+        conv3 = self.conv3(conv2)
+
+        output_features_3 = self.conv_out[3](conv3)
+        intra_feat = F.interpolate(conv3, scale_factor=2, mode="bilinear") + self.conv_inner[2](conv2)
+        output_features_2 = self.conv_out[2](intra_feat)
+        intra_feat = F.interpolate(conv2, scale_factor=2, mode="bilinear") + self.conv_inner[1](conv1)
+        output_features_1 = self.conv_out[1](intra_feat)
+        intra_feat = F.interpolate(conv1, scale_factor=2, mode="bilinear") + self.conv_inner[0](conv0)
+        output_features_0 = self.conv_out[0](intra_feat)
+
+        return (output_features_3, output_features_2, output_features_1, output_features_0)
 
 ###### Experimental ######
 class PSVEncoder(nn.Module):
