@@ -150,9 +150,10 @@ class Pipeline(BasePipeline):
                         data["hypotheses"][iteration] = output["hypotheses"]
                     if iteration < num_stages - 1:
                         data["hypotheses"][iteration + 1] = output["next_hypotheses"]
-                    confidence += output["confidence"].detach()
-
-                    if mode != "inference":
+                    
+                    if mode == "inference":
+                        confidence += output["confidence"].detach()
+                    else:
                         # Compute loss
                         loss = self.compute_loss(
                             data,
@@ -169,10 +170,7 @@ class Pipeline(BasePipeline):
                                 self.cfg["optimizer"]["grad_clip"],
                             )
                             self.optimizer.step()
-                            self.optimizer.zero_grad()
-
-                # confidence average
-                output["confidence"] = confidence.div_(num_stages)
+                            self.optimizer.zero_grad()                    
 
                 stats = {}
                 if mode != "inference":
@@ -219,6 +217,8 @@ class Pipeline(BasePipeline):
                     )
 
                 else:
+                    # confidence average
+                    output["confidence"] = confidence.div_(num_stages)
                     # Store network output
                     self.save_output(data, output, int(data["ref_id"][0]))
 
