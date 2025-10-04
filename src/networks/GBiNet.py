@@ -110,7 +110,6 @@ class Network(nn.Module):
 
         # build image features
         image_features = self.build_features(data, resolution_stage)
-        print(image_features[0].shape)
         batch_size, _, height, width = image_features[0].shape
 
         if iteration == 0:
@@ -150,7 +149,6 @@ class Network(nn.Module):
         next_hypotheses = self.subdivide_hypotheses(
             hypotheses, pred_hypo_index, iteration
         )
-        print("next_hypo", next_hypotheses.shape)
 
         # upsample depth and confidence maps to full resolution
         with torch.no_grad():
