@@ -96,7 +96,7 @@ class Network(nn.Module):
             if iteration + 1 < self.max_stages:
                 if (
                     self.resolution_stages[iteration + 1]
-                    > self.resolution_stages[iteration]
+                    < self.resolution_stages[iteration]
                 ):
                     next_hypotheses = F.interpolate(
                         next_hypotheses, scale_factor=2, mode="nearest"
@@ -104,12 +104,13 @@ class Network(nn.Module):
 
         return next_hypotheses
 
-    def forward(self, data, resolution_level, iteration, final_iteration):
+    def forward(self, data, resolution_stage, iteration, final_iteration):
         batch_size, _, _, height, width = data["images"].shape
         output = {}
 
         # build image features
-        image_features = self.build_features(data, resolution_level)
+        image_features = self.build_features(data, resolution_stage)
+        print(image_features[0].shape)
         batch_size, _, height, width = image_features[0].shape
 
         if iteration == 0:
@@ -132,15 +133,15 @@ class Network(nn.Module):
         #### Build cost volume ####
         cost_volume = homography_warp(
             features=image_features,
-            intrinsics=data["multires_intrinsics"][:, :, resolution_level],
+            intrinsics=data["multires_intrinsics"][:, :, resolution_stage],
             extrinsics=data["poses"],
             hypotheses=hypotheses,
-            group_channels=self.group_channels[resolution_level],
-            vwa_net=self.view_weight_nets[resolution_level],
+            group_channels=self.group_channels[resolution_stage],
+            vwa_net=self.view_weight_nets[resolution_stage],
         )
 
         #### Cost Regularization ####
-        cost_volume = self.cost_reg[resolution_level](cost_volume)
+        cost_volume = self.cost_reg[resolution_stage](cost_volume)
         cost_volume = cost_volume.squeeze(1)
 
         # gather depth and subdivide depth hypotheses
@@ -149,6 +150,7 @@ class Network(nn.Module):
         next_hypotheses = self.subdivide_hypotheses(
             hypotheses, pred_hypo_index, iteration
         )
+        print("next_hypo", next_hypotheses.shape)
 
         # upsample depth and confidence maps to full resolution
         with torch.no_grad():

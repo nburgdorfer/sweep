@@ -44,9 +44,9 @@ class Pipeline(BasePipeline):
     def get_network(self):
         return Network(self.cfg).to(self.device)
 
-    def compute_loss(self, data, output, resolution_level, final_iteration):
+    def compute_loss(self, data, output, resolution_stage, final_iteration):
         loss = {}
-        target_depth = data["target_depths"][resolution_level]
+        target_depth = data["target_depths"][resolution_stage]
         target_labels, mask = build_labels(target_depth, output["hypotheses"])
         cost_volume = output["cost_volume"]  # [B, C, H, W]
 
@@ -63,7 +63,7 @@ class Pipeline(BasePipeline):
         #     rmse = rmse * self.cfg["loss"]["rmse_weight"]
         #     error += rmse
 
-        loss["total"] = error * self.loss_weights[resolution_level]
+        loss["total"] = error * self.loss_weights[resolution_stage]
         loss["cov_percent"] = mask.sum() / (
             torch.where(target_depth > 0, 1, 0).sum() + 1e-10
         )
@@ -129,10 +129,10 @@ class Pipeline(BasePipeline):
                 output = {}
                 loss = {}
                 num_stages = len(self.resolution_stages)
-                for iteration, resolution_level in enumerate(self.resolution_stages):
+                for iteration, resolution_stage in enumerate(self.resolution_stages):
                     if (
                         self.stage_training
-                        and (resolution_level < self.current_resolution)
+                        and (resolution_stage < self.current_resolution)
                         and (mode != "inference")
                     ):
                         break
@@ -140,7 +140,7 @@ class Pipeline(BasePipeline):
                     # Run network forward pass
                     output = self.model(
                         data,
-                        resolution_level=resolution_level,
+                        resolution_stage=resolution_stage,
                         iteration=iteration,
                         final_iteration=(iteration == (num_stages - 1)),
                     )
@@ -157,7 +157,7 @@ class Pipeline(BasePipeline):
                         loss = self.compute_loss(
                             data,
                             output,
-                            resolution_level,
+                            resolution_stage,
                             final_iteration=(iteration == (num_stages - 1)),
                         )
 
