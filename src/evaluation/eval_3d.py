@@ -18,27 +18,30 @@ seed(5)
 np.random.seed(5)
 milliseconds = int(time() * 1000)
 
+
 def remove_close_points(ply, min_point_dist):
     # build KD-Tree of estimated point cloud for querying
     tree = KDTree(np.asarray(ply.points), leaf_size=40)
     (dists, inds) = tree.query(np.asarray(ply.points), k=2)
 
     # ignore first nearest neighbor (since it is the point itself)
-    dists = dists[:,1]
-    inds = inds[:,1]
+    dists = dists[:, 1]
+    inds = inds[:, 1]
 
     # get unique set of indices
-    ind_pairs = np.asarray([ np.asarray([min(i,inds[i]),max(i,inds[i])]) for i in range(len(inds)) ])
+    ind_pairs = np.asarray(
+        [np.asarray([min(i, inds[i]), max(i, inds[i])]) for i in range(len(inds))]
+    )
     close_inds = np.where(dists < min_point_dist)[0]
     remove_inds = set()
     pair_set = set()
-    
-    for ind in tqdm(close_inds):
-        i,j = ind_pairs[ind]
 
-        if ((i,j) not in pair_set):
+    for ind in tqdm(close_inds):
+        i, j = ind_pairs[ind]
+
+        if (i, j) not in pair_set:
             remove_inds.add(i)
-            pair_set.add((i,j))
+            pair_set.add((i, j))
 
     remove_inds = list(remove_inds)
 
@@ -53,9 +56,9 @@ def remove_close_points(ply, min_point_dist):
     #               index = i - offset
     #               ind_pairs = np.delete(ind_pairs, index, axis=0)
 
-
     cloud = ply.select_by_index(remove_inds, invert=True)
     return cloud
+
 
 def build_est_points_filter(est_ply, data_path, scan_num):
     # read in matlab bounding box, mask, and resolution
@@ -63,8 +66,8 @@ def build_est_points_filter(est_ply, data_path, scan_num):
     mask_path = os.path.join(data_path, "ObsMask", mask_filename)
     data = sio.loadmat(mask_path)
     bounds = np.asarray(data["BB"])
-    min_bound = bounds[0,:]
-    max_bound = bounds[1,:]
+    min_bound = bounds[0, :]
+    max_bound = bounds[1, :]
     mask = np.asarray(data["ObsMask"])
     res = int(data["Res"])
 
@@ -73,19 +76,30 @@ def build_est_points_filter(est_ply, data_path, scan_num):
     mask_shape = mask.shape
     filt = np.zeros(shape[1])
 
-    min_bound = min_bound.reshape(3,1)
-    min_bound = np.tile(min_bound, (1,shape[1]))
+    min_bound = min_bound.reshape(3, 1)
+    min_bound = np.tile(min_bound, (1, shape[1]))
 
     qv = points
     qv = (points - min_bound) / res
     qv = round_nearest(qv).astype(int)
 
     # get all valid points
-    in_bounds = np.asarray(np.where( ((qv[0,:]>=0) & (qv[0,:] < mask_shape[0]) & (qv[1,:]>=0) & (qv[1,:] < mask_shape[1]) & (qv[2,:]>=0) & (qv[2,:] < mask_shape[2])))).squeeze(0)
-    valid_points = qv[:,in_bounds]
+    in_bounds = np.asarray(
+        np.where(
+            (
+                (qv[0, :] >= 0)
+                & (qv[0, :] < mask_shape[0])
+                & (qv[1, :] >= 0)
+                & (qv[1, :] < mask_shape[1])
+                & (qv[2, :] >= 0)
+                & (qv[2, :] < mask_shape[2])
+            )
+        )
+    ).squeeze(0)
+    valid_points = qv[:, in_bounds]
 
     # convert 3D coords ([x,y,z]) to appropriate flattened coordinate ((x*mask_shape[1]*mask_shape[2]) + (y*mask_shape[2]) + z )
-    mask_inds = np.ravel_multi_index(valid_points, dims=mask.shape, order='C')
+    mask_inds = np.ravel_multi_index(valid_points, dims=mask.shape, order="C")
 
     # further trim down valid points by mask value (keep point if mask is True)
     mask = mask.flatten()
@@ -96,8 +110,9 @@ def build_est_points_filter(est_ply, data_path, scan_num):
 
     return filt
 
+
 def build_gt_points_filter(ply, data_path, scan_num):
-    # read in matlab gt plane 
+    # read in matlab gt plane
     mask_filename = "Plane{}.mat".format(scan_num)
     mask_path = os.path.join(data_path, "ObsMask", mask_filename)
     data = sio.loadmat(mask_path)
@@ -109,7 +124,7 @@ def build_gt_points_filter(ply, data_path, scan_num):
     # compute iner-product between points and the defined plane
     Pt = P.transpose()
 
-    points = np.concatenate((points, np.ones((1,shape[1]))), axis=0)
+    points = np.concatenate((points, np.ones((1, shape[1]))), axis=0)
     plane_prod = (Pt @ points).squeeze(0)
 
     # get all valid points
@@ -117,12 +132,16 @@ def build_gt_points_filter(ply, data_path, scan_num):
 
     return filt
 
+
 def filter_outlier_points(est_ply, gt_ply, outlier_th):
     dists_est = np.asarray(est_ply.compute_point_cloud_distance(gt_ply))
     valid_dists = np.where(dists_est <= outlier_th)[0]
     return est_ply.select_by_index(valid_dists)
 
-def compare_point_clouds(est_ply, gt_ply, mask_th, max_dist, min_dist, est_filt=None, gt_filt=None):
+
+def compare_point_clouds(
+    est_ply, gt_ply, mask_th, max_dist, min_dist, est_filt=None, gt_filt=None
+):
     mask_gt = 20.0
     inlier_th = 0.5
 
@@ -158,9 +177,9 @@ def compare_point_clouds(est_ply, gt_ply, mask_th, max_dist, min_dist, est_filt=
     comp = np.mean(dists_gt)
 
     # measure incremental precision and recall values with thesholds from (0, 10*max_dist)
-    th_vals = np.linspace(0, 3*max_dist, num=50)
-    prec_vals = [ (len(np.where(dists_est <= th)[0]) / len(dists_est)) for th in th_vals ]
-    rec_vals = [ (len(np.where(dists_gt <= th)[0]) / len(dists_gt)) for th in th_vals ]
+    th_vals = np.linspace(0, 3 * max_dist, num=50)
+    prec_vals = [(len(np.where(dists_est <= th)[0]) / len(dists_est)) for th in th_vals]
+    rec_vals = [(len(np.where(dists_gt <= th)[0]) / len(dists_gt)) for th in th_vals]
 
     # compute precision and recall for given distance threshold
     prec = len(np.where(dists_est <= max_dist)[0]) / len(dists_est)
@@ -214,14 +233,18 @@ def compare_point_clouds(est_ply, gt_ply, mask_th, max_dist, min_dist, est_filt=
 
     precision_ply = valid_est_ply + invalid_est_ply
     recall_ply = valid_gt_ply + invalid_gt_ply
-    acc_outliers_ply = inlier_est_ply+outlier_est_ply+invalid_est_ply
-    comp_outliers_ply = inlier_gt_ply+outlier_gt_ply+invalid_gt_ply
+    acc_outliers_ply = inlier_est_ply + outlier_est_ply + invalid_est_ply
+    comp_outliers_ply = inlier_gt_ply + outlier_gt_ply + invalid_gt_ply
 
-    return  (precision_ply, recall_ply) \
-            ,(acc_outliers_ply, comp_outliers_ply) \
-            ,(acc,comp), (prec, rec) \
-            ,(th_vals, prec_vals, rec_vals) \
-            ,(est_size, gt_size)
+    return (
+        (precision_ply, recall_ply),
+        (acc_outliers_ply, comp_outliers_ply),
+        (acc, comp),
+        (prec, rec),
+        (th_vals, prec_vals, rec_vals),
+        (est_size, gt_size),
+    )
+
 
 def dtu_point_eval(cfg, scan, method):
     eval_data_path = os.path.join(cfg["data_path"], "Evaluation")
@@ -242,9 +265,13 @@ def dtu_point_eval(cfg, scan, method):
     est_ply = est_ply.voxel_down_sample(min_point_dist)
 
     if resolution == "dense":
-        gt_ply_path = os.path.join(cfg["data_path"], "Point_Clouds_Dense", f"scan{scan_num:03d}.ply")
+        gt_ply_path = os.path.join(
+            cfg["data_path"], "Point_Clouds_Dense", f"scan{scan_num:03d}.ply"
+        )
     else:
-        gt_ply_path = os.path.join(cfg["data_path"], "Point_Clouds_Sparse", f"stl{scan_num:03d}_total.ply")
+        gt_ply_path = os.path.join(
+            cfg["data_path"], "Point_Clouds_Sparse", f"stl{scan_num:03d}_total.ply"
+        )
     gt_ply = read_point_cloud(gt_ply_path)
 
     # build points filter based on input mask
@@ -253,18 +280,21 @@ def dtu_point_eval(cfg, scan, method):
     gt_filt = build_gt_points_filter(gt_ply, eval_data_path, scan_num)
 
     # compute distances between point clouds
-    (precision_ply, recall_ply) \
-    ,(acc_outliers_ply, comp_outliers_ply) \
-    ,(acc,comp) \
-    ,(prec, rec) \
-    ,(th_vals, prec_vals, rec_vals) \
-    ,(est_size, gt_size) = \
-    compare_point_clouds(est_ply, gt_ply, mask_th, max_dist, min_dist, est_filt, gt_filt)
+    (
+        (precision_ply, recall_ply),
+        (acc_outliers_ply, comp_outliers_ply),
+        (acc, comp),
+        (prec, rec),
+        (th_vals, prec_vals, rec_vals),
+        (est_size, gt_size),
+    ) = compare_point_clouds(
+        est_ply, gt_ply, mask_th, max_dist, min_dist, est_filt, gt_filt
+    )
 
-    fscore = 2*prec*rec / (prec+rec)
+    fscore = 2 * prec * rec / (prec + rec)
 
     end_total = time()
-    dur = end_total-start_total
+    dur = end_total - start_total
 
     # display current evaluation
     print(f"Accuracy: {acc:0.4f}")
@@ -274,7 +304,7 @@ def dtu_point_eval(cfg, scan, method):
 
     ##### Save metrics #####
     eval_path = os.path.join(output_path, scan, "eval")
-    if (os.path.exists(eval_path)):
+    if os.path.exists(eval_path):
         shutil.rmtree(eval_path)
     os.mkdir(eval_path)
 
@@ -299,7 +329,7 @@ def dtu_point_eval(cfg, scan, method):
     plt.plot(th_vals, prec_vals, th_vals, rec_vals)
     plt.title("Precision and Recall (t={}mm)".format(max_dist))
     plt.xlabel("threshold")
-    plt.vlines(max_dist, 0, 1, linestyles='dashed', label='t')
+    plt.vlines(max_dist, 0, 1, linestyles="dashed", label="t")
     plt.legend(("precision", "recall"))
     plt.grid()
     plt.savefig(plot_filename)
@@ -307,9 +337,11 @@ def dtu_point_eval(cfg, scan, method):
 
     # write all metrics to the evaluation file
     stats_file = os.path.join(eval_path, "metrics.txt")
-    with open(stats_file, 'w') as f:
+    with open(stats_file, "w") as f:
         f.write(f"Method: {method}\n")
-        f.write(f"Min_point_dist: {min_point_dist:0.3f}mm | Max distance threshold: {max_dist:0.3f}mm | Min distance threshold: {min_dist:0.3f}mm | Mask threshold: {mask_th:0.3f}mm\n")
+        f.write(
+            f"Min_point_dist: {min_point_dist:0.3f}mm | Max distance threshold: {max_dist:0.3f}mm | Min distance threshold: {min_dist:0.3f}mm | Mask threshold: {mask_th:0.3f}mm\n"
+        )
         f.write(f"Source point cloud size: {est_size}\n")
         f.write(f"Target point cloud size: {gt_size}\n")
         f.write(f"Accuracy: {acc:0.3f}mm\n")

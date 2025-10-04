@@ -9,10 +9,11 @@ import torch
 import trimesh
 from scipy.spatial import cKDTree as KDTree
 
-'''
+"""
 reconstruction evaluation tools
 modified from https://github.com/cvg/nice-slam/blob/master/src/tools/eval_recon.py
-'''
+"""
+
 
 def filter_occluded_points(points_pred, world2grid, occlusion_mask):
     dim_x = occlusion_mask.shape[0]
@@ -23,15 +24,18 @@ def filter_occluded_points(points_pred, world2grid, occlusion_mask):
     # Transform points to bbox space.
     R_world2grid = world2grid[:3, :3].view(1, 3, 3).expand(num_points_pred, -1, -1)
     t_world2grid = world2grid[:3, 3].view(1, 3, 1).expand(num_points_pred, -1, -1)
-    
-    points_pred_coords = (torch.matmul(R_world2grid, points_pred.view(num_points_pred, 3, 1)) + t_world2grid).view(num_points_pred, 3)
+
+    points_pred_coords = (
+        torch.matmul(R_world2grid, points_pred.view(num_points_pred, 3, 1))
+        + t_world2grid
+    ).view(num_points_pred, 3)
 
     # Normalize to [-1, 1]^3 space.
     # The world2grid transforms world positions to voxel centers, so we need to
     # use "align_corners=True".
-    points_pred_coords[:, 0] /= (dim_x - 1)
-    points_pred_coords[:, 1] /= (dim_y - 1)
-    points_pred_coords[:, 2] /= (dim_z - 1)
+    points_pred_coords[:, 0] /= dim_x - 1
+    points_pred_coords[:, 1] /= dim_y - 1
+    points_pred_coords[:, 2] /= dim_z - 1
     points_pred_coords = points_pred_coords * 2 - 1
 
     # Trilinearly interpolate occlusion mask.
@@ -44,7 +48,11 @@ def filter_occluded_points(points_pred, world2grid, occlusion_mask):
     points_pred_coords = points_pred_coords.view(1, 1, 1, num_points_pred, 3)
 
     points_pred_visibility = torch.nn.functional.grid_sample(
-        visibility_mask, points_pred_coords.cpu(), mode='bilinear', padding_mode='zeros', align_corners=True
+        visibility_mask,
+        points_pred_coords.cpu(),
+        mode="bilinear",
+        padding_mode="zeros",
+        align_corners=True,
     ).cuda()
 
     points_pred_visibility = points_pred_visibility.view(num_points_pred)
@@ -109,8 +117,12 @@ def get_align_transformation(rec_meshfile, gt_meshfile):
     trans_init = np.eye(4)
     threshold = 0.1
     reg_p2p = o3d.pipelines.registration.registration_icp(
-        o3d_rec_pc, o3d_gt_pc, threshold, trans_init,
-        o3d.pipelines.registration.TransformationEstimationPointToPoint())
+        o3d_rec_pc,
+        o3d_gt_pc,
+        threshold,
+        trans_init,
+        o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+    )
     # for open3d 0.9.0
     # reg_p2p = o3d.registration.registration_icp(
     #     o3d_rec_pc, o3d_gt_pc, threshold, trans_init,
@@ -131,20 +143,27 @@ def check_proj(points, W, H, fx, fy, cx, cy, c2w):
     w2c = np.linalg.inv(c2w)
     w2c = torch.from_numpy(w2c).cuda().float()
     K = torch.from_numpy(
-        np.array([[fx, .0, cx], [.0, fy, cy], [.0, .0, 1.0]]).reshape(3, 3)).cuda()
+        np.array([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]]).reshape(3, 3)
+    ).cuda()
     ones = torch.ones_like(points[:, 0]).reshape(-1, 1).cuda()
-    homo_points = torch.cat(
-        [points, ones], dim=1).reshape(-1, 4, 1).cuda().float()  # (N, 4)
-    cam_cord_homo = w2c@homo_points  # (N, 4, 1)=(4,4)*(N, 4, 1)
+    homo_points = (
+        torch.cat([points, ones], dim=1).reshape(-1, 4, 1).cuda().float()
+    )  # (N, 4)
+    cam_cord_homo = w2c @ homo_points  # (N, 4, 1)=(4,4)*(N, 4, 1)
     cam_cord = cam_cord_homo[:, :3]  # (N, 3, 1)
     cam_cord[:, 0] *= -1
-    uv = K.float()@cam_cord.float()
+    uv = K.float() @ cam_cord.float()
     z = uv[:, -1:] + 1e-5
-    uv = uv[:, :2]/z
+    uv = uv[:, :2] / z
     uv = uv.float().squeeze(-1).cpu().numpy()
     edge = 0
-    mask = (0 <= -z[:, 0, 0].cpu().numpy()) & (uv[:, 0] < W -
-                                               edge) & (uv[:, 0] > edge) & (uv[:, 1] < H-edge) & (uv[:, 1] > edge)
+    mask = (
+        (0 <= -z[:, 0, 0].cpu().numpy())
+        & (uv[:, 0] < W - edge)
+        & (uv[:, 0] > edge)
+        & (uv[:, 1] < H - edge)
+        & (uv[:, 1] > edge)
+    )
     return mask.sum() > 0
 
 
@@ -161,13 +180,12 @@ def calc_3d_mesh_metric(mesh_rec, mesh_gt, align=False):
     gt_pc_tri = trimesh.PointCloud(vertices=gt_pc[0])
     accuracy_rec = accuracy(gt_pc_tri.vertices, rec_pc_tri.vertices)
     completion_rec = completion(gt_pc_tri.vertices, rec_pc_tri.vertices)
-    completion_ratio_rec = completion_ratio(
-        gt_pc_tri.vertices, rec_pc_tri.vertices)
+    completion_ratio_rec = completion_ratio(gt_pc_tri.vertices, rec_pc_tri.vertices)
     accuracy_rec *= 100  # convert to cm
     completion_rec *= 100  # convert to cm
     completion_ratio_rec *= 100  # convert to %
 
-    return {'acc': accuracy_rec, 'comp': completion_rec, 'comp%': completion_ratio_rec}
+    return {"acc": accuracy_rec, "comp": completion_rec, "comp%": completion_ratio_rec}
 
 
 def calc_3d_metric(rec_meshfile, gt_meshfile, align=True):
@@ -190,8 +208,7 @@ def calc_3d_metric(rec_meshfile, gt_meshfile, align=True):
     gt_pc_tri = trimesh.PointCloud(vertices=gt_pc[0])
     accuracy_rec = accuracy(gt_pc_tri.vertices, rec_pc_tri.vertices)
     completion_rec = completion(gt_pc_tri.vertices, rec_pc_tri.vertices)
-    completion_ratio_rec = completion_ratio(
-        gt_pc_tri.vertices, rec_pc_tri.vertices)
+    completion_ratio_rec = completion_ratio(gt_pc_tri.vertices, rec_pc_tri.vertices)
     accuracy_rec *= 100  # convert to cm
     completion_rec *= 100  # convert to cm
     completion_ratio_rec *= 100  # convert to %
@@ -200,7 +217,12 @@ def calc_3d_metric(rec_meshfile, gt_meshfile, align=True):
     print(f"Ovr(cm): {((accuracy_rec+completion_rec)/2.0):0.3f}")
     print(f"Comp ratio(%): {completion_ratio_rec:0.2f}%")
 
-    return accuracy_rec, completion_rec, (accuracy_rec+completion_rec)/2.0, completion_ratio_rec
+    return (
+        accuracy_rec,
+        completion_rec,
+        (accuracy_rec + completion_rec) / 2.0,
+        completion_ratio_rec,
+    )
 
 
 def get_cam_position(gt_meshfile, sx=0.3, sy=0.6, sz=0.6, dx=0.0, dy=0.0, dz=0.0):
@@ -218,11 +240,24 @@ def get_cam_position(gt_meshfile, sx=0.3, sy=0.6, sz=0.6, dx=0.0, dy=0.0, dz=0.0
     return extents, transform
 
 
-def calc_2d_metric(rec_meshfile, gt_meshfile, unseen_gt_pcd_file,
-                   pose_file=None, gt_depth_render_file=None,
-                   depth_render_file=None, suffix="virt_cams", align=True,
-                   n_imgs=1000, not_counting_missing_depth=True,
-                   sx=0.3, sy=0.6, sz=0.6, dx=0.0, dy=0.0, dz=0.0):
+def calc_2d_metric(
+    rec_meshfile,
+    gt_meshfile,
+    unseen_gt_pcd_file,
+    pose_file=None,
+    gt_depth_render_file=None,
+    depth_render_file=None,
+    suffix="virt_cams",
+    align=True,
+    n_imgs=1000,
+    not_counting_missing_depth=True,
+    sx=0.3,
+    sy=0.6,
+    sz=0.6,
+    dx=0.0,
+    dy=0.0,
+    dz=0.0,
+):
     """
     2D reconstruction metric, depth L1 loss. modified from NICE-SLAM
     :param rec_meshfile: path to culled reconstructed mesh .ply
@@ -248,8 +283,8 @@ def calc_2d_metric(rec_meshfile, gt_meshfile, unseen_gt_pcd_file,
     focal = 300
     fx = focal
     fy = focal
-    cx = H/2.0-0.5
-    cy = W/2.0-0.5
+    cx = H / 2.0 - 0.5
+    cy = W / 2.0 - 0.5
 
     gt_mesh = o3d.io.read_triangle_mesh(gt_meshfile)
     rec_mesh = o3d.io.read_triangle_mesh(rec_meshfile)
@@ -285,7 +320,9 @@ def calc_2d_metric(rec_meshfile, gt_meshfile, unseen_gt_pcd_file,
         rec_mesh = rec_mesh.transform(transformation)
 
     # get vacant area inside the room
-    extents, transform = get_cam_position(gt_meshfile, sx=sx, sy=sy, sz=sz, dx=dx, dy=dy, dz=dz)
+    extents, transform = get_cam_position(
+        gt_meshfile, sx=sx, sy=sy, sz=sz, dx=dx, dy=dy, dz=dz
+    )
 
     vis = o3d.visualization.Visualizer()
     vis.create_window(width=W, height=H)
@@ -302,7 +339,9 @@ def calc_2d_metric(rec_meshfile, gt_meshfile, unseen_gt_pcd_file,
                 # camera-up (Y-direction) vector under world
                 up = [0, 0, -1]
                 # camera origin coord under world coordinate-frame, sampled within extents of the oriented bound
-                origin = trimesh.sample.volume_rectangular(extents, 1, transform=transform)
+                origin = trimesh.sample.volume_rectangular(
+                    extents, 1, transform=transform
+                )
                 origin = origin.reshape(-1)
                 # sampled target coord under world [tx, ty, tz]
                 tx = round(random.uniform(-10000, +10000), 2)
@@ -310,13 +349,13 @@ def calc_2d_metric(rec_meshfile, gt_meshfile, unseen_gt_pcd_file,
                 tz = round(random.uniform(-10000, +10000), 2)
                 target = [tx, ty, tz]
                 # look_at vector (camera-Z), from origin to target
-                target = np.array(target)-np.array(origin)
+                target = np.array(target) - np.array(origin)
                 c2w = viewmatrix(target, up, origin)
                 tmp = np.eye(4)
                 tmp[:3, :] = c2w
                 c2w = tmp
                 seen = check_proj(pc_unseen, W, H, fx, fy, cx, cy, c2w)
-                if (~seen):
+                if ~seen:
                     break
             poses.append(c2w)
         else:
@@ -326,68 +365,83 @@ def calc_2d_metric(rec_meshfile, gt_meshfile, unseen_gt_pcd_file,
         # extrinsic is w2c
         param.extrinsic = np.linalg.inv(c2w)  # 4x4 numpy array
 
-        param.intrinsic = o3d.camera.PinholeCameraIntrinsic(
-            W, H, fx, fy, cx, cy)
+        param.intrinsic = o3d.camera.PinholeCameraIntrinsic(W, H, fx, fy, cx, cy)
 
         ctr = vis.get_view_control()
         ctr.set_constant_z_far(20)
         ctr.convert_from_pinhole_camera_parameters(param)
 
         if gt_depth_renderings is None:
-            vis.add_geometry(gt_mesh, reset_bounding_box=True,)
+            vis.add_geometry(
+                gt_mesh,
+                reset_bounding_box=True,
+            )
             ctr.convert_from_pinhole_camera_parameters(param)
             vis.poll_events()
             vis.update_renderer()
             gt_depth = vis.capture_depth_float_buffer(True)
             gt_depth = np.asarray(gt_depth)
-            vis.remove_geometry(gt_mesh, reset_bounding_box=True,)
+            vis.remove_geometry(
+                gt_mesh,
+                reset_bounding_box=True,
+            )
             gt_depths.append(gt_depth)
         else:
             gt_depth = gt_depth_renderings[i]
-        
+
         if depth_renderings is None:
-            vis.add_geometry(rec_mesh, reset_bounding_box=True,)
+            vis.add_geometry(
+                rec_mesh,
+                reset_bounding_box=True,
+            )
             ctr.convert_from_pinhole_camera_parameters(param)
             vis.poll_events()
             vis.update_renderer()
             ours_depth = vis.capture_depth_float_buffer(True)
             ours_depth = np.asarray(ours_depth)
-            vis.remove_geometry(rec_mesh, reset_bounding_box=True,)
+            vis.remove_geometry(
+                rec_mesh,
+                reset_bounding_box=True,
+            )
             depths.append(ours_depth)
         else:
             ours_depth = depth_renderings[i]
 
         if not_counting_missing_depth:
-            valid_mask = (gt_depth > 0.) & (gt_depth < 19.)
+            valid_mask = (gt_depth > 0.0) & (gt_depth < 19.0)
             if np.count_nonzero(valid_mask) <= 100:
                 continue
             # print(i, np.count_nonzero(valid_mask))
             errors += [np.abs(gt_depth[valid_mask] - ours_depth[valid_mask]).mean()]
         else:
-            errors += [np.abs(gt_depth-ours_depth).mean()]
+            errors += [np.abs(gt_depth - ours_depth).mean()]
 
     if pose_file is None:
-        np.savez(os.path.join(gt_dir, "sampled_poses_{}.npz".format(n_imgs)), poses=poses)
+        np.savez(
+            os.path.join(gt_dir, "sampled_poses_{}.npz".format(n_imgs)), poses=poses
+        )
     elif not os.path.exists(pose_file):
         np.savez(pose_file, poses=poses)
 
     if gt_depth_render_file is None:
-        np.savez(os.path.join(gt_dir, "gt_depths_{}.npz".format(n_imgs)), depths=gt_depths)
+        np.savez(
+            os.path.join(gt_dir, "gt_depths_{}.npz".format(n_imgs)), depths=gt_depths
+        )
     elif not os.path.exists(gt_depth_render_file):
         np.savez(gt_depth_render_file, depths=gt_depths)
 
     if depth_render_file is None:
-        np.savez(os.path.join(log_dir, "depths_{}_{}.npz".format(suffix, n_imgs)), depths=depths)
+        np.savez(
+            os.path.join(log_dir, "depths_{}_{}.npz".format(suffix, n_imgs)),
+            depths=depths,
+        )
     elif not os.path.exists(depth_render_file):
         np.savez(depth_render_file, depths=depths)
 
     errors = np.array(errors)
     # from m to cm
-    print('Depth L1: ', errors.mean() * 100)
+    print("Depth L1: ", errors.mean() * 100)
     return {"Depth L1": errors.mean() * 100}
-
-
-
 
     #   if eval_2d:
     #       eval_data_dir = os.path.dirname(args.gt_mesh)

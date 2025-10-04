@@ -1,4 +1,4 @@
-import os,sys
+import os, sys
 
 from cvtkit.common import set_random_seed
 from src.config import load_config, load_scene_list, get_argparser
@@ -28,6 +28,11 @@ ts = load_scene_list(os.path.join(ARGS.config_path, "scene_lists", "training.txt
 vs = load_scene_list(os.path.join(ARGS.config_path, "scene_lists", "validation.txt"))
 
 #### TRAINING ####
-pipeline = Pipeline(cfg=cfg, log_path=ARGS.log_path, model_name=ARGS.model, training_scenes=ts, validation_scenes=vs)
+pipeline = Pipeline(
+    cfg=cfg,
+    log_path=ARGS.log_path,
+    model_name=ARGS.model,
+    training_scenes=ts,
+    validation_scenes=vs,
+)
 pipeline.training()
-

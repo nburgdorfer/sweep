@@ -13,9 +13,25 @@ from src.evaluation.eval_2d import depth_acc
 # MVSNet Network
 from src.networks.MVSNet import Network
 
+
 class Pipeline(BasePipeline):
-    def __init__(self, cfg, log_path, model_name, training_scenes=[], validation_scenes=[], inference_scene=[]):
-            super(Pipeline, self).__init__(cfg, log_path, model_name, training_scenes, validation_scenes, inference_scene)
+    def __init__(
+        self,
+        cfg,
+        log_path,
+        model_name,
+        training_scenes=[],
+        validation_scenes=[],
+        inference_scene=[],
+    ):
+        super(Pipeline, self).__init__(
+            cfg,
+            log_path,
+            model_name,
+            training_scenes,
+            validation_scenes,
+            inference_scene,
+        )
 
     def get_network(self):
         return Network(self.cfg, self.device).to(self.device)
@@ -24,15 +40,20 @@ class Pipeline(BasePipeline):
         loss = {}
 
         final_depth = output["final_depth"]
-        target_depth = F.interpolate(data["target_depth"], (final_depth.shape[2], final_depth.shape[3]))
+        target_depth = F.interpolate(
+            data["target_depth"], (final_depth.shape[2], final_depth.shape[3])
+        )
 
         batch_size, c, height, width = target_depth.shape
-        assert  final_depth.shape == target_depth.shape, \
-                f"Target depth shape ({target_depth.shape}) and Estimate depth shape ({final_depth.shape}) do not match."
+        assert (
+            final_depth.shape == target_depth.shape
+        ), f"Target depth shape ({target_depth.shape}) and Estimate depth shape ({final_depth.shape}) do not match."
 
         mask = torch.where(target_depth > self.cfg["camera"]["near"], 1.0, 0.0)
-        depth_error = F.smooth_l1_loss(final_depth, target_depth, reduction='none') * mask
-        depth_error = depth_error.sum(dim=(1,2,3)) / mask.sum(dim=(1,2,3))
+        depth_error = (
+            F.smooth_l1_loss(final_depth, target_depth, reduction="none") * mask
+        )
+        depth_error = depth_error.sum(dim=(1, 2, 3)) / mask.sum(dim=(1, 2, 3))
 
         loss["depth"] = depth_error.mean()
         loss["total"] = loss["depth"]
@@ -40,12 +61,11 @@ class Pipeline(BasePipeline):
         return loss
 
     def compute_stats(self, data, output):
-        with torch.set_grad_enabled((torch.is_grad_enabled and not torch.is_inference_mode_enabled)):
+        with torch.set_grad_enabled(
+            (torch.is_grad_enabled and not torch.is_inference_mode_enabled)
+        ):
             mae, acc = depth_acc(output["final_depth"][0], data["target_depth"][0])
-        stats = {
-                "mae": mae,
-                "acc": acc
-                }
+        stats = {"mae": mae, "acc": acc}
         return stats
 
     def run(self, mode, epoch):
@@ -68,14 +88,11 @@ class Pipeline(BasePipeline):
             vis_freq = self.cfg["training"]["vis_freq"]
             vis_path = self.log_vis
             title_suffix = f" - Epoch {epoch}"
-            sums = {
-                    "loss": 0.0,
-                    "mae": 0.0,
-                    "acc": 0.0
-                    }
+            sums = {"loss": 0.0, "mae": 0.0, "acc": 0.0}
 
-
-        with tqdm(data_loader, desc=f"MVSNet {mode}{title_suffix}", unit="batch") as loader:
+        with tqdm(
+            data_loader, desc=f"MVSNet {mode}{title_suffix}", unit="batch"
+        ) as loader:
             for batch_ind, data in enumerate(loader):
                 to_gpu(data, self.device)
 
@@ -90,7 +107,9 @@ class Pipeline(BasePipeline):
                     if mode != "validation":
                         self.mvs_optimizer.zero_grad(set_to_none=True)
                         loss["total"].backward()
-                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg["training"]["grad_clip"])
+                        torch.nn.utils.clip_grad_norm_(
+                            self.model.parameters(), self.cfg["training"]["grad_clip"]
+                        )
                         self.optimizer.step()
 
                     # Compute output statistics
@@ -103,25 +122,47 @@ class Pipeline(BasePipeline):
                     max_mem = torch.cuda.max_memory_allocated(device=self.device)
                     max_mem = float(max_mem / 1.073742e9)
                     loader.set_postfix(
-                            loss=f"{(sums['loss']/(batch_ind+1)):6.2f}",
-                            mae=f"{(sums['mae']/(batch_ind+1)):6.2f}",
-                            acc_1cm=f"{(sums['acc']/(batch_ind+1))*100:3.2f}%",
-                            max_memory=f"{(max_mem):2.3f}"
-                            )
+                        loss=f"{(sums['loss']/(batch_ind+1)):6.2f}",
+                        mae=f"{(sums['mae']/(batch_ind+1)):6.2f}",
+                        acc_1cm=f"{(sums['acc']/(batch_ind+1))*100:3.2f}%",
+                        max_memory=f"{(max_mem):2.3f}",
+                    )
 
                     ## Log loss and statistics
-                    iteration = (len(loader)*(epoch)) + batch_ind
-                    self.logger.add_scalar(f"{mode} - Loss", float(loss["total"].detach().cpu().item()), iteration)
-                    self.logger.add_scalar(f"{mode} - Mean Average Error", float(stats["mae"].detach().cpu().item()), iteration)
-                    self.logger.add_scalar(f"{mode} - Accuracy", float(stats["acc"].detach().cpu().item())*100, iteration)
-                    self.logger.add_scalar(f"{mode} - Max Memory", float(max_mem), iteration)
+                    iteration = (len(loader) * (epoch)) + batch_ind
+                    self.logger.add_scalar(
+                        f"{mode} - Loss",
+                        float(loss["total"].detach().cpu().item()),
+                        iteration,
+                    )
+                    self.logger.add_scalar(
+                        f"{mode} - Mean Average Error",
+                        float(stats["mae"].detach().cpu().item()),
+                        iteration,
+                    )
+                    self.logger.add_scalar(
+                        f"{mode} - Accuracy",
+                        float(stats["acc"].detach().cpu().item()) * 100,
+                        iteration,
+                    )
+                    self.logger.add_scalar(
+                        f"{mode} - Max Memory", float(max_mem), iteration
+                    )
                 else:
                     # Store network output
                     self.save_output(data, output, int(data["ref_id"][0]))
 
                 ## Visualization
-                if (visualize and batch_ind % vis_freq == 0):
-                    visualize_mvs(data, output, batch_ind, vis_path, self.cfg["visualization"]["max_depth_error"], mode=mode, epoch=epoch)
+                if visualize and batch_ind % vis_freq == 0:
+                    visualize_mvs(
+                        data,
+                        output,
+                        batch_ind,
+                        vis_path,
+                        self.cfg["visualization"]["max_depth_error"],
+                        mode=mode,
+                        epoch=epoch,
+                    )
 
                 if mode != "inference":
                     del loss

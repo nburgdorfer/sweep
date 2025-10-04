@@ -3,6 +3,7 @@ import torch.nn as nn
 
 from src.components.layers import Conv2d
 
+
 class BasicRefiner(nn.Module):
     def __init__(self, in_channels, c):
         super(BasicRefiner, self).__init__()
