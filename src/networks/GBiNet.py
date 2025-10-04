@@ -52,17 +52,15 @@ class Network(nn.Module):
         # #### Depth Refiner
         # self.refiner = BasicRefiner(in_channels=4, c=8)
 
-    def build_features(self, data):
+    def build_features(self, data, resolution_level):
+        print(resolution_level)
         views = data["images"].shape[1]
         images = data["images"]
 
-        image_features = {i: [] for i in range(self.resolution_levels)}
+        image_features = []
         for i in range(views):
             image_i = images[:, i]
-            features_i = self.feature_encoder(image_i)
-            for j in range(self.resolution_levels):
-                image_features[j].append(features_i[j])
-
+            image_features.append(self.feature_encoder(image_i, resolution_level))
         return image_features
 
     def subdivide_hypotheses(self, hypotheses, pred_hypo_index, iteration):
@@ -112,7 +110,8 @@ class Network(nn.Module):
         output = {}
 
         # build image features
-        image_features = self.build_features(data)[resolution_level]
+        image_features = self.build_features(data, resolution_level)
+        print(image_features[0].shape)
         batch_size, _, height, width = image_features[0].shape
 
         if iteration == 0:

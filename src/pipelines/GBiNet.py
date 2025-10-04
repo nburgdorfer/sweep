@@ -38,7 +38,7 @@ class Pipeline(BasePipeline):
         self.stage_intervals = self.cfg["model"]["stage_intervals"]
         self.stage_training = self.cfg["model"]["stage_training"]
         self.current_resolution = (
-            0 if self.stage_training else len(self.stage_intervals)
+            len(self.stage_intervals) if self.stage_training else 0
         )
 
     def get_network(self):
@@ -88,12 +88,13 @@ class Pipeline(BasePipeline):
             dataset = self.inference_dataset
             title_suffix = ""
         else:
-            if self.current_resolution >= len(self.stage_intervals):
+            if self.current_resolution == 0:
                 self.stage_training = False
 
             if self.stage_training:
-                if epoch >= self.stage_intervals[self.current_resolution]:
-                    self.current_resolution += 1
+                if epoch >= self.stage_intervals[0]:
+                    self.current_resolution -= 1
+                    self.stage_intervals.pop()
 
             if mode == "training":
                 self.model.train()
@@ -113,6 +114,8 @@ class Pipeline(BasePipeline):
             data_loader, desc=f"GBiNet {mode}{title_suffix}", unit="batch"
         ) as loader:
             for batch_ind, data in enumerate(loader):
+                if batch_ind > 10:
+                    break
                 to_gpu(data, self.device)
 
                 # build image features
@@ -129,7 +132,7 @@ class Pipeline(BasePipeline):
                 for iteration, resolution_level in enumerate(self.resolution_stages):
                     if (
                         self.stage_training
-                        and (resolution_level > self.current_resolution)
+                        and (resolution_level < self.current_resolution)
                         and (mode != "inference")
                     ):
                         break

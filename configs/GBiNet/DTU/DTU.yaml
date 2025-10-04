@@ -31,7 +31,7 @@ loss:
 model:
     feature_channels: [8, 16, 32, 64] # fine -> coarse
     group_channels: [4,8,8,8] # fine -> coarse
-    resolution_stages: [0,0,1,1,2,2,3,3] # The resolution stages for each iteration
+    resolution_stages: [3,3,2,2,1,1,0,0] # The resolution stages for each iteration (0 is the largest)
     stage_training: True
     stage_intervals: [2,4,6]
 

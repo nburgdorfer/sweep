@@ -199,7 +199,7 @@ class FPN(nn.Module):
             )
         )
 
-    def forward(self, tensor):
+    def forward(self, tensor, resolution_level):
         conv0 = self.input_conv(tensor)
 
         # Up Convolution
@@ -208,14 +208,18 @@ class FPN(nn.Module):
             convs.append(self.up_conv[i](convs[i]))
 
         # Lateral Convolution
-        output_features = []
+        # output_features = []
         lateral_features = convs[3]
         for i in range(self.levels - 1, 0, -1):
-            output_features.append(self.output_conv[i](lateral_features))
+            output_features = (self.output_conv[i](lateral_features))
+
+            # skip computing higher resolution features if they are not needed
+            if i==resolution_level:
+                return output_features
+
             lateral_features = F.interpolate(
                 convs[i], scale_factor=2, mode="bilinear"
             ) + self.lateral_conv[i - 1](convs[i - 1])
 
-        output_features.append(self.output_conv[0](lateral_features))
-
-        return output_features
+        
+        return (self.output_conv[0](lateral_features))

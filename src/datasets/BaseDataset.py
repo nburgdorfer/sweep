@@ -179,7 +179,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
         data["images"] = images
         data["poses"] = poses
         data["target_depth"] = target_depths[0]
-        data["target_depth_1"] = target_depths[1]
+        # data["target_depth_1"] = target_depths[1]
         if self.cfg["camera"]["baseline_mode"] == "min":
             data["baseline"] = min_baseline
         elif self.cfg["camera"]["baseline_mode"] == "max":
@@ -194,7 +194,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
             multires_intrinsics = []
             for i in range(self.num_frame):
                 multires_intrinsics.append(
-                    intrinsic_pyramid(K, self.resolution_levels)[::-1]
+                    intrinsic_pyramid(K, self.resolution_levels)
                 )
 
             data["multires_intrinsics"] = np.stack(multires_intrinsics).astype(
