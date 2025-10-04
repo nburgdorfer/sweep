@@ -193,9 +193,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
 
             multires_intrinsics = []
             for i in range(self.num_frame):
-                multires_intrinsics.append(
-                    intrinsic_pyramid(K, self.resolution_levels)
-                )
+                multires_intrinsics.append(intrinsic_pyramid(K, self.resolution_levels))
 
             data["multires_intrinsics"] = np.stack(multires_intrinsics).astype(
                 np.float32
