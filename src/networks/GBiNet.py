@@ -28,7 +28,7 @@ class Network(nn.Module):
         self.feature_encoder = FPN(
             in_channels=3,
             out_channels=self.feature_channels,
-            base_channels=8,
+            base_channels=4,
             levels=4,
             block_size=3,
         )

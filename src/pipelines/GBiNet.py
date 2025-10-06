@@ -114,8 +114,6 @@ class Pipeline(BasePipeline):
             data_loader, desc=f"GBiNet {mode}{title_suffix}", unit="batch"
         ) as loader:
             for batch_ind, data in enumerate(loader):
-                if batch_ind > 10:
-                    break
                 to_gpu(data, self.device)
 
                 # build image features
