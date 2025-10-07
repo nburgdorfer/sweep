@@ -6,7 +6,7 @@ MODEL=$2
 
 CONFIG_PATH=configs/${MODEL}/${DATASET}/
 ## Logging
-TEST_SAVE_DIR=${DATASET}_${MODEL}_training_small_$(date +"%F-%T")
+TEST_SAVE_DIR=${DATASET}_${MODEL}_training_$(date +"%F-%T")
 LOG_PATH="log/${TEST_SAVE_DIR}/"
 if [ ! -d ${LOG_PATH} ]; then
     mkdir -p ${LOG_PATH};

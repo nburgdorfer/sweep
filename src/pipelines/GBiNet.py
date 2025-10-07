@@ -94,7 +94,7 @@ class Pipeline(BasePipeline):
             if self.stage_training:
                 if epoch >= self.stage_intervals[0]:
                     self.current_resolution -= 1
-                    self.stage_intervals.pop()
+                    self.stage_intervals.pop(0)
 
             if mode == "training":
                 self.model.train()
