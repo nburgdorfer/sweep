@@ -1,8 +1,8 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.components.layers import Conv2d, ConvTranspose2d, Conv3d, ConvTranspose3d, mlp
+from src.components.layers import Conv2d
+# from torchvision.ops import DeformConv2d
 
 
 class BasicEncoder(nn.Module):
@@ -198,6 +198,28 @@ class FPN(nn.Module):
                 bias=False,
             )
         )
+
+        # ### Output Convolution Layers
+        # self.output_conv = nn.ModuleList()
+        # for i in range(1, levels):
+        #     self.output_conv.append(
+        #         DeformConv2d(
+        #             hidden_channels[i],
+        #             out_channels[i - 1],
+        #             kernel_size=3,
+        #             stride=1,
+        #             padding=1,
+        #         )
+        #     )
+        # self.output_conv.append(
+        #     DeformConv2d(
+        #         hidden_channels[levels - 1],
+        #         out_channels[levels - 1],
+        #         kernel_size=3,
+        #         stride=1,
+        #         padding=1,
+        #     )
+        # )
 
     def forward(self, tensor, resolution_level):
         conv0 = self.input_conv(tensor)

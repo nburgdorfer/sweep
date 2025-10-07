@@ -4,15 +4,14 @@ data_path: /mnt/Drive2/DTU/
 output_path: /mnt/Drive1/Results/DTU/GBiNet_6/
 device: cuda:0
 seed: 43
-num_workers: 4
+num_workers: 0
 
 camera:
     height: 1200
     width: 1600
     near: 425
     far: 937
-    crop_h: 48
-    crop_w: 64
+    divisible_factor: 64
     baseline_mode: min
 
 inference:
@@ -53,16 +52,19 @@ point_cloud:
   resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
-    batch_size: 8
+    batch_size: 2
     ckpt_file: 
     epochs: 16
     frame_spacing: 1
     max_training_samples:
     max_val_samples:
     num_frame: 5
-    random_crop: False
+    random_crop:
+        enable: False
+        height: 512
+        width: 640
     sample_mode: cluster
-    scale: 0.5
+    scale: 1.0
     visualize: False
     vis_freq: 100
 

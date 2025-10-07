@@ -133,7 +133,7 @@ class Network(nn.Module):
         cost_volume = homography_warp(
             features=image_features,
             intrinsics=data["multires_intrinsics"][:, :, resolution_stage],
-            extrinsics=data["poses"],
+            extrinsics=data["extrinsics"],
             hypotheses=hypotheses,
             group_channels=self.group_channels[resolution_stage],
             vwa_net=self.view_weight_nets[resolution_stage],

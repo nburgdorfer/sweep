@@ -1,4 +1,5 @@
 import numpy as np
+from torch import Tag
 from torch.utils.data import Dataset
 import cv2
 
@@ -31,11 +32,12 @@ class BaseDataset(Dataset[dict[str, Any]]):
         self.cfg = cfg
         self.mode = mode
         self.data_path = self.cfg["data_path"]
+        self.set_data_paths()
         self.device = self.cfg["device"]
         self.scenes = scenes
-        self.crop_h = self.cfg["camera"]["crop_h"]
-        self.crop_w = self.cfg["camera"]["crop_w"]
+        self.divisible_factor = self.cfg["camera"]["divisible_factor"]
         self.png_depth_scale: float | None = None
+        
 
         try:
             self.resolution_levels = len(self.cfg["model"]["feature_channels"])
@@ -53,52 +55,123 @@ class BaseDataset(Dataset[dict[str, Any]]):
             self.frame_spacing = self.cfg["training"]["frame_spacing"]
             self.scale = self.cfg["training"]["scale"]
             self.sample_mode = self.cfg["training"]["sample_mode"]
-            self.random_crop = self.cfg["training"]["random_crop"]
+            self.random_crop = self.cfg["training"]["random_crop"]["enable"]
+            self.random_crop_height = self.cfg["training"]["random_crop"]["height"]
+            self.random_crop_width = self.cfg["training"]["random_crop"]["width"]
         self.random_clusters = mode == "training"
 
-        self.K: dict[str, Any] = {}
-        self.W = 0
-        self.H = 0
+        if self.random_crop:
+            self.H = self.random_crop_height
+            self.W = self.random_crop_width
+        else:
+            self.H = int((self.cfg["camera"]["height"]* self.scale // self.divisible_factor) * self.divisible_factor) 
+            self.W = int((self.cfg["camera"]["width"]* self.scale // self.divisible_factor) * self.divisible_factor)
+
         self.samples, self.frame_count = self.build_samples()
 
-        # if self.mode == "inference":
-        #     # use all samples during inference
-        #     self.samples = self.total_samples
-        # else:
-        #     # shuffle and sub-sample during training
-        #     if self.mode=="training":
-        #         self.max_samples = self.cfg["training"]["max_training_samples"]
-        #     elif self.mode=="validation":
-        #         self.max_samples = self.cfg["training"]["max_val_samples"]
-        #     self.shuffle_and_subsample()
-
-    def build_samples(self) -> tuple[list[dict[str, Any]], int]:
+    def set_data_paths(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def load_intrinsics(self, scene: str) -> None:
+    def build_samples(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def get_pose(self, pose_file: str) -> NDArray[np.float32]:
+    def get_camera_parameters(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def get_image(self, image_file: str, scale: bool = True):
-        image = cv2.imread(image_file)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        # crop and resize image
-        h, w, _ = image.shape
-        image = image[
-            (self.crop_h // 2) : h - (self.crop_h // 2),
-            (self.crop_w // 2) : w - (self.crop_w // 2),
-            :,
+    def custom_crop(self, image, start_row, start_col, crop_height, crop_width):
+        return image[
+            start_row : start_row + crop_height, start_col : start_col + crop_width
         ]
-        if scale:
-            image = cv2.resize(image, (self.W, self.H), interpolation=cv2.INTER_LINEAR)
-        image = normalize(image)
-        image = np.moveaxis(image, [0, 1, 2], [1, 2, 0])
+
+    def center_crop(
+        self,
+        image: NDArray[np.float32],
+        new_shape: tuple[int, int] | None = None,
+        crop_size: tuple[int, int] | None = None,
+    ) -> NDArray[np.float32]:
+        """Crops the center of an image.
+
+        Either new_shape or crop_size should be provided to this function.
+        The new_shape argument specifies the new shape of the image to be
+        returned. This should be a tuple of (height, width). The crop_size
+        argument specifies the amount of rows and columns to be cropped from
+        the input image. This should be a tuple of (crop_rows, crop_cols).
+        If both are provided, this function defaults to cropping based on the
+        new_shape argument.
+
+        Args:
+            image: The image to be cropped.
+            new_shape: The desired size for the cropped image (height, width)
+            crop_size: The desired amount to be cropped (crop_rows, crop_cols)
+        """
+        if new_shape is not None:
+            crop_height = image.shape[0] - new_shape[0]
+            crop_width = image.shape[1] - new_shape[1]
+        elif crop_size is not None:
+            crop_height = crop_size[0]
+            crop_width = crop_size[1]
+        else:
+            raise Exception(
+                "ERROR: Must provide a valid image or cropping shape for cetner cropping."
+            )
+
+        return image[
+            (crop_height // 2) : image.shape[0] - (crop_height // 2),
+            (crop_width // 2) : image.shape[1] - (crop_width // 2),
+        ]
+
+    def factor_crop(self, image, factor):
+        h, w = image.shape[0], image.shape[1]
+
+        new_h = int((h // factor) * factor)
+        new_w = int((w // factor) * factor)
+
+        crop_row = h - new_h
+        crop_col = w - new_w
+
+        return (
+            self.center_crop(image, crop_size=(crop_row, crop_col)),
+            crop_row,
+            crop_col,
+        )
+
+    def normalize(self, image):
+        return ((image / 255.0) - 0.5) * 2.0
+
+    def corner_crop_image(self, image, crop_height, crop_width):
+        return image[:crop_height, crop_width]
+
+    def scale_image(self, image, scale):
+        return cv2.resize(
+            image,
+            (int(image.shape[1] * scale), int(image.shape[0] * scale)),
+            interpolation=cv2.INTER_LINEAR,
+        )
+
+    def get_valid_random_crop(self, depth, crop_height, crop_width, iterations=1000):
+        for _ in range(iterations):
+            crop_row = np.random.randint(0, depth.shape[0] - crop_height)
+            crop_col = np.random.randint(0, depth.shape[1] - crop_width)
+            cropped_depth = self.custom_crop(depth, crop_row, crop_col, crop_height, crop_width)
+
+            if np.any(cropped_depth > 0.0):
+                return crop_row, crop_col
+
+        raise Exception(
+            "ERROR: could not find a valid random crop that includes any ground truth data."
+        )
+
+    def get_image(
+        self, image_file: str, convert_to_rgb: bool = False
+    ) -> NDArray[np.float32]:
+        image = cv2.imread(image_file)
+
+        if convert_to_rgb:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
         return image.astype(np.float32)
 
-    def get_depth(self, depth_file: str, scale: bool = True) -> NDArray[Any]:
+    def get_depth(self, depth_file: str, scale: bool = True) -> NDArray[np.float32]:
         if depth_file[-3:] == "pfm":
             depth = read_pfm(depth_file)
         elif self.png_depth_scale is not None:
@@ -108,17 +181,6 @@ class BaseDataset(Dataset[dict[str, Any]]):
                 f"ERROR: If depth file is not a 'pfm', an rgb->depth scale must be provided."
             )
 
-        # crop and resize depth
-        h, w = depth.shape
-        depth = depth[
-            (self.crop_h // 2) : h - (self.crop_h // 2),
-            (self.crop_w // 2) : w - (self.crop_w // 2),
-        ]
-        if scale:
-            depth = cv2.resize(
-                src=depth, dsize=(self.W, self.H), interpolation=cv2.INTER_LINEAR
-            )
-        depth = depth.reshape(1, depth.shape[0], depth.shape[1])
         return depth.astype(np.float32)
 
     def __len__(self):
@@ -127,59 +189,75 @@ class BaseDataset(Dataset[dict[str, Any]]):
     def __getitem__(self, idx: int):
         idx = idx % self.__len__()
         sample = self.samples[idx]
-        scene = sample["scene"]
-
-        # load and compute intrinsics
-        K = np.copy(self.K[scene])
-
-        # random crop scaled image patches or scale entire image
-        if self.random_crop:
-            crop_row = np.random.randint(
-                0, (self.cfg["camera"]["height"] - self.crop_h) - self.H
-            )
-            crop_col = np.random.randint(
-                0, (self.cfg["camera"]["width"] - self.crop_w) - self.W
-            )
-            K = crop_intrinsics(K, crop_row, crop_col)
-        else:
-            K = scale_intrinsics(K, scale=self.scale)
 
         images = [None] * self.num_frame
-        poses = [None] * self.num_frame
+        extrinsics = [None] * self.num_frame
+        intrinsics = [None] * self.num_frame
         target_depths = [None] * self.num_frame
-        filenames = []
-        for i, fid in enumerate(sample["frame_inds"]):
-            images[i] = self.get_image(
-                sample["image_files"][i], scale=(not self.random_crop)
-            )
-            poses[i] = self.get_pose(sample["pose_files"][i])
-            target_depths[i] = self.get_depth(
-                sample["depth_files"][i], scale=(not self.random_crop)
-            )
-            filenames.append(
-                scene + "-" + "_".join("%04d" % x for x in sample["frame_inds"])
-            )
+        for i in range(len(sample["frame_inds"])):
+            image = self.get_image(sample["image_files"][i])
+
+            P, K = self.get_camera_parameters(sample["camera_files"][i])
+            target_depth = self.get_depth(sample["depth_files"][i])
 
             if self.random_crop:
-                images[i] = crop_image(images[i], crop_row, crop_col, self.scale)
-                target_depths[i] = crop_image(
-                    target_depths[i], crop_row, crop_col, self.scale
+                # random crop images
+                crop_row, crop_col = self.get_valid_random_crop(
+                    target_depth, self.random_crop_height, self.random_crop_width
                 )
+                image = self.custom_crop(
+                    image,
+                    crop_row,
+                    crop_col,
+                    self.random_crop_height,
+                    self.random_crop_width,
+                )
+                target_depth = self.custom_crop(
+                    target_depth,
+                    crop_row,
+                    crop_col,
+                    self.random_crop_height,
+                    self.random_crop_width,
+                )
+                K = crop_intrinsics(K, crop_row, crop_col)
+            elif self.scale < 1.0:
+                # scale data if a scale value is provided
+                image = self.scale_image(image, self.scale)
+                target_depth = self.scale_image(target_depth, self.scale)
+                K = scale_intrinsics(K, scale=self.scale)
+
+            # crop according to the desired factor of divisibility
+            # (used to make resolution a multiple of self.devisible_factor)
+            image, crop_h, crop_w = self.factor_crop(image, self.divisible_factor)
+            target_depth = self.center_crop(target_depth, crop_size=(crop_h, crop_w))
+            K = crop_intrinsics(K, crop_h // 2, crop_w // 2)
+
+            image = self.normalize(image)
+            image = np.moveaxis(image, [0, 1, 2], [1, 2, 0])
+
+            images[i] = image
+            target_depths[i] = target_depth.reshape(
+                1, target_depth.shape[0], target_depth.shape[1]
+            )
+            extrinsics[i] = P
+            intrinsics[i] = K
         images = np.asarray(images, dtype=np.float32)
-        poses = np.asarray(poses, dtype=np.float32)
+        extrinsics = np.asarray(extrinsics, dtype=np.float32)
+        # intrinsics = np.asarray(intrinsics, dtype=np.float32)
+        K = np.asarray(intrinsics, dtype=np.float32)[0]
         target_depths = np.asarray(target_depths, dtype=np.float32)
 
         # compute min and max camera baselines
-        min_baseline, max_baseline = compute_baselines(poses)
+        min_baseline, max_baseline = compute_baselines(extrinsics)
 
         # load data dict
         data = {}
         data["ref_id"] = int(sample["frame_inds"][0])
-        data["K"] = K
         data["images"] = images
-        data["poses"] = poses
+        data["extrinsics"] = extrinsics
+        # data["intrinsics"] = intrinsics
+        data["K"] = K
         data["target_depth"] = target_depths[0]
-        # data["target_depth_1"] = target_depths[1]
         if self.cfg["camera"]["baseline_mode"] == "min":
             data["baseline"] = min_baseline
         elif self.cfg["camera"]["baseline_mode"] == "max":
