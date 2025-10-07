@@ -1,10 +1,10 @@
 # data_path: /home/nburgdor/data/DTU/
-# output_path: /home/nburgdor/Results/DTU/GBiNet_6/
+# output_path: /home/nburgdor/Results/DTU/GBiNet/
 data_path: /mnt/Drive2/DTU/
-output_path: /mnt/Drive1/Results/DTU/GBiNet_6/
+output_path: /mnt/Drive1/Results/DTU/GBiNet/
 device: cuda:0
 seed: 43
-num_workers: 0
+num_workers: 4
 
 camera:
     height: 1200
@@ -15,7 +15,7 @@ camera:
     baseline_mode: min
 
 inference:
-    ckpt_file: pretrained_models/model_GBiNet_DTU_6.pt
+    ckpt_file: pretrained_models/model_GBiNet_DTU.pt
     frame_spacing: 1
     num_frame: 5
     sample_mode: cluster
@@ -52,7 +52,7 @@ point_cloud:
   resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
-    batch_size: 2
+    batch_size: 8
     ckpt_file: 
     epochs: 16
     frame_spacing: 1
@@ -60,7 +60,7 @@ training:
     max_val_samples:
     num_frame: 5
     random_crop:
-        enable: False
+        enable: True
         height: 512
         width: 640
     sample_mode: cluster

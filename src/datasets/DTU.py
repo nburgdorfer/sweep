@@ -15,7 +15,7 @@ class DTU(BaseDataset):
         super(DTU, self).__init__(cfg, mode, scenes)
 
     def set_data_paths(self):
-        self.images_path = os.path.join(self.data_path, "Image_Lightings")
+        self.images_path = os.path.join(self.data_path, "Images", "Lighting")
         self.target_depths_path = os.path.join(self.data_path, "Depths")
         self.cameras_path = os.path.join(self.data_path, "Cameras")
 
