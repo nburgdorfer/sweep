@@ -1,7 +1,7 @@
-data_path: /home/nburgdor/data/DTU/
-output_path: /home/nburgdor/Results/DTU/GBiNet_6/
-# data_path: /mnt/Drive2/DTU/
-# output_path: /mnt/Drive1/Results/DTU/GBiNet_6/
+# data_path: /home/nburgdor/data/DTU/
+# output_path: /home/nburgdor/Results/DTU/GBiNet_6/
+data_path: /mnt/Drive2/DTU/
+output_path: /mnt/Drive1/Results/DTU/GBiNet_6/
 device: cuda:0
 seed: 43
 num_workers: 4
@@ -29,7 +29,7 @@ loss:
     rmse_weight: 0.01
 
 model:
-    feature_channels: [4, 8, 16, 32] # fine -> coarse
+    feature_channels: [8, 16, 32, 64] # fine -> coarse
     group_channels: [4,8,8,8] # fine -> coarse
     resolution_stages: [3,3,2,2,1,1,0,0] # The resolution stages for each iteration (0 is the largest)
     stage_training: True
