@@ -193,18 +193,33 @@ class BaseDataset(Dataset[dict[str, Any]]):
         images = [None] * self.num_frame
         extrinsics = [None] * self.num_frame
         intrinsics = [None] * self.num_frame
-        target_depths = [None] * self.num_frame
+        target_depth = None
+        crop_row = 0
+        crop_col = 0
         for i in range(len(sample["frame_inds"])):
             image = self.get_image(sample["image_files"][i])
 
-            P, K = self.get_camera_parameters(sample["camera_files"][i])
-            target_depth = self.get_depth(sample["depth_files"][i])
+            P_i, K_i = self.get_camera_parameters(sample["camera_files"][i])
+
+            if i==0:
+                target_depth = self.get_depth(sample["depth_files"][i])
 
             if self.random_crop:
-                # random crop images
-                crop_row, crop_col = self.get_valid_random_crop(
-                    target_depth, self.random_crop_height, self.random_crop_width
-                )
+                if i==0:
+                    # random crop images
+                    crop_row, crop_col = self.get_valid_random_crop(
+                        target_depth, self.random_crop_height, self.random_crop_width
+                    )
+
+                    target_depth = self.custom_crop(
+                        target_depth,
+                        crop_row,
+                        crop_col,
+                        self.random_crop_height,
+                        self.random_crop_width,
+                    )
+                
+                K_i = crop_intrinsics(K_i, crop_row, crop_col)
                 image = self.custom_crop(
                     image,
                     crop_row,
@@ -212,40 +227,34 @@ class BaseDataset(Dataset[dict[str, Any]]):
                     self.random_crop_height,
                     self.random_crop_width,
                 )
-                target_depth = self.custom_crop(
-                    target_depth,
-                    crop_row,
-                    crop_col,
-                    self.random_crop_height,
-                    self.random_crop_width,
-                )
-                K = crop_intrinsics(K, crop_row, crop_col)
+
             elif self.scale < 1.0:
-                # scale data if a scale value is provided
+                K = scale_intrinsics(K_i, scale=self.scale)
                 image = self.scale_image(image, self.scale)
-                target_depth = self.scale_image(target_depth, self.scale)
-                K = scale_intrinsics(K, scale=self.scale)
+
+                if i==0:
+                    target_depth = self.scale_image(target_depth, self.scale)
 
             # crop according to the desired factor of divisibility
             # (used to make resolution a multiple of self.devisible_factor)
             image, crop_h, crop_w = self.factor_crop(image, self.divisible_factor)
-            target_depth = self.center_crop(target_depth, crop_size=(crop_h, crop_w))
-            K = crop_intrinsics(K, crop_h // 2, crop_w // 2)
-
+            K_i = crop_intrinsics(K_i, crop_h // 2, crop_w // 2)
             image = self.normalize(image)
             image = np.moveaxis(image, [0, 1, 2], [1, 2, 0])
 
+            if i==0:
+                assert target_depth is not None
+                target_depth = self.center_crop(target_depth, crop_size=(crop_h, crop_w))
+                target_depth = target_depth.reshape(
+                    1, target_depth.shape[0], target_depth.shape[1]
+                )            
+
             images[i] = image
-            target_depths[i] = target_depth.reshape(
-                1, target_depth.shape[0], target_depth.shape[1]
-            )
-            extrinsics[i] = P
-            intrinsics[i] = K
+            extrinsics[i] = P_i
+            intrinsics[i] = K_i
         images = np.asarray(images, dtype=np.float32)
         extrinsics = np.asarray(extrinsics, dtype=np.float32)
-        # intrinsics = np.asarray(intrinsics, dtype=np.float32)
-        K = np.asarray(intrinsics, dtype=np.float32)[0]
-        target_depths = np.asarray(target_depths, dtype=np.float32)
+        intrinsics = np.asarray(intrinsics, dtype=np.float32)
 
         # compute min and max camera baselines
         min_baseline, max_baseline = compute_baselines(extrinsics)
@@ -256,8 +265,8 @@ class BaseDataset(Dataset[dict[str, Any]]):
         data["images"] = images
         data["extrinsics"] = extrinsics
         # data["intrinsics"] = intrinsics
-        data["K"] = K
-        data["target_depth"] = target_depths[0]
+        data["K"] = intrinsics[0]
+        data["target_depth"] = target_depth
         if self.cfg["camera"]["baseline_mode"] == "min":
             data["baseline"] = min_baseline
         elif self.cfg["camera"]["baseline_mode"] == "max":
@@ -265,13 +274,14 @@ class BaseDataset(Dataset[dict[str, Any]]):
 
         ## Scaling intrinsics for the feature pyramid
         if self.resolution_levels > 1:
+            assert data["target_depth"] is not None
             data["target_depths"] = build_depth_pyramid(
                 data["target_depth"][0], levels=self.resolution_levels
             )
 
             multires_intrinsics = []
             for i in range(self.num_frame):
-                multires_intrinsics.append(intrinsic_pyramid(K, self.resolution_levels))
+                multires_intrinsics.append(intrinsic_pyramid(intrinsics[0], self.resolution_levels))
 
             data["multires_intrinsics"] = np.stack(multires_intrinsics).astype(
                 np.float32

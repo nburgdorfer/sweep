@@ -153,15 +153,6 @@ class DTU(BaseDataset):
             )
         return samples
 
-    # def load_intrinsics(self, scene: str) -> None:
-    #     cam_file = os.path.join(self.data_path, "Cameras/00000000_cam.txt")
-    #     cam = read_single_cam_sfm(cam_file)
-    #     self.K[scene] = cam[1, :3, :3].astype(np.float32)
-    #     self.K[scene][0, 2] -= self.crop_w // 2
-    #     self.K[scene][1, 2] -= self.crop_h // 2
-    #     self.H: int = int(self.scale * (self.cfg["camera"]["height"] - self.crop_h))
-    #     self.W: int = int(self.scale * (self.cfg["camera"]["width"] - self.crop_w))
-
     def get_camera_parameters(
         self, camera_file: str
     ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
