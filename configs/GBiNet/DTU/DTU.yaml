@@ -1,7 +1,7 @@
-data_path: /home/nburgdor/data/DTU/
-output_path: /home/nburgdor/Results/DTU/GBiNet/
-# data_path: /mnt/Drive2/DTU/
-# output_path: /mnt/Drive1/Results/DTU/GBiNet/
+# data_path: /home/nburgdor/data/DTU/
+# output_path: /home/nburgdor/Results/DTU/GBiNet/
+data_path: /mnt/Drive2/DTU/
+output_path: /mnt/Drive1/Results/DTU/GBiNet/
 device: cuda:0
 seed: 43
 num_workers: 4
@@ -31,7 +31,7 @@ model:
     feature_channels: [4, 8, 16, 32] # fine -> coarse
     group_channels: [4,8,8,8] # fine -> coarse
     resolution_stages: [3,3,2,2,1,1,0,0] # The resolution stages for each iteration (0 is the largest)
-    stage_training: True
+    stage_training: False
     stage_intervals: [2,4,6]
 
 optimizer:
@@ -52,7 +52,7 @@ point_cloud:
   resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
-    batch_size: 8
+    batch_size: 2
     ckpt_file: 
     epochs: 16
     frame_spacing: 1
