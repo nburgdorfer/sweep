@@ -141,7 +141,8 @@ class Network(nn.Module):
 
         #### Cost Regularization ####
         cost_volume = self.cost_reg[resolution_stage](cost_volume)
-        # cost_volume = torch.softmax(cost_volume.squeeze(1), dim=1)
+        cost_volume = cost_volume.squeeze(1)
+        # cost_volume = torch.softmax(cost_volume, dim=1)
 
         # gather depth and subdivide depth hypotheses
         pred_hypo_index = torch.argmax(cost_volume, dim=1).to(torch.int64)
