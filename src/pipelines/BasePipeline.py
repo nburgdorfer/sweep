@@ -59,12 +59,14 @@ class BasePipeline:
             )
             self.camera_path = os.path.join(self.output_path, "camera")
             self.depth_path = os.path.join(self.output_path, "depth")
+            self.target_depth_path = os.path.join(self.output_path, "gt_depth")
             self.conf_path = os.path.join(self.output_path, "conf")
             self.image_path = os.path.join(self.output_path, "image")
             self.vis_path = os.path.join(self.output_path, "visuals")
             os.makedirs(self.output_path, exist_ok=True)
             os.makedirs(self.camera_path, exist_ok=True)
             os.makedirs(self.depth_path, exist_ok=True)
+            os.makedirs(self.target_depth_path, exist_ok=True)
             os.makedirs(self.conf_path, exist_ok=True)
             os.makedirs(self.image_path, exist_ok=True)
             os.makedirs(self.vis_path, exist_ok=True)
@@ -113,6 +115,19 @@ class BasePipeline:
                 self.depth_path, "disp", f"{sample_ind:08d}.png"
             )
             cv2.imwrite(depth_filename, (depth_map * 255))
+            # # save target depth map
+            # target_depth_map = data["target_depth"][0, 0].detach().cpu().numpy()
+            # target_depth_filename = os.path.join(self.target_depth_path, f"{sample_ind:08d}.pfm")
+            # write_pfm(target_depth_filename, target_depth_map)
+            # target_depth_map = (
+            #     data["target_depth"][0, 0].detach().cpu().numpy()
+            #     - self.cfg["camera"]["near"]
+            # ) / (self.cfg["camera"]["far"] - self.cfg["camera"]["near"])
+            # os.makedirs(os.path.join(self.target_depth_path, "disp"), exist_ok=True)
+            # target_depth_filename = os.path.join(
+            #     self.target_depth_path, "disp", f"{sample_ind:08d}.png"
+            # )
+            # cv2.imwrite(target_depth_filename, (target_depth_map * 255))
             # save image
             ref_image = (
                 torch.movedim(data["images"][0, 0], (0, 1, 2), (2, 0, 1))
@@ -122,10 +137,10 @@ class BasePipeline:
                 + 0.5
             ) * 255
             img_filename = os.path.join(self.image_path, f"{sample_ind:08d}.png")
-            cv2.imwrite(img_filename, ref_image[:, :, ::-1])
+            cv2.imwrite(img_filename, ref_image)
             # save camera
             intrinsics = data["K"][0].detach().cpu().numpy()
-            extrinsics = data["poses"][0, 0].detach().cpu().numpy()
+            extrinsics = data["extrinsics"][0, 0].detach().cpu().numpy()
             cam_filename = os.path.join(self.camera_path, f"{sample_ind:08d}_cam.txt")
             write_cam_sfm(cam_filename, intrinsics, extrinsics)
 

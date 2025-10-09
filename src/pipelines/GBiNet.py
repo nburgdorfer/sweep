@@ -172,7 +172,7 @@ class Pipeline(BasePipeline):
                             self.optimizer.zero_grad()
 
                 # confidence average
-                output["confidence"] = confidence.div_(num_stages)
+                output["confidence"] = torch.clip(confidence.div_(num_stages), 0.0, 1.0)
 
                 stats = {}
                 if mode != "inference":

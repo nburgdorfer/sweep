@@ -149,7 +149,7 @@ def depth_fscore(est_depth_path, est_conf_path, dataset, th=2.0):
     return precision.mean(axis=0), recall.mean(axis=0), fscore.mean(axis=0)
 
 
-def eval_2d(paths, dataset, vis_path=None, scale=True):
+def eval_2d(paths, dataset, scene, vis_path=None):
     # threshold values used for depth error pixel percentages
     thresholds = [0.125, 0.25, 0.5, 1.0]
     re_files = 10
@@ -160,7 +160,7 @@ def eval_2d(paths, dataset, vis_path=None, scale=True):
     est_depth_files.sort()
 
     # load target depth maps
-    target_depths = dataset.get_all_depths(scale)
+    target_depths = dataset.get_all_depths(scene)
 
     mae = np.zeros((len(est_depth_files)), dtype=np.float32)
     auc = np.zeros((len(est_depth_files)), dtype=np.float32)
@@ -172,7 +172,7 @@ def eval_2d(paths, dataset, vis_path=None, scale=True):
         maps["est_conf"] = torch.tensor(
             read_pfm(os.path.join(paths["confidence"], f"{ref_ind:08d}.pfm"))
         )
-        maps["target_depth"] = torch.tensor(target_depths[ref_ind])[0]
+        maps["target_depth"] = torch.tensor(target_depths[ref_ind])
         mask = torch.where(maps["target_depth"] > 0, 1, 0)
 
         # compute MAE

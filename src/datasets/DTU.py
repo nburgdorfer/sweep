@@ -176,31 +176,39 @@ class DTU(BaseDataset):
             )
         return (P, K)
 
-    def get_all_poses(self) -> list[NDArray[Any]]:
+    def get_all_camera_parameters(self) -> list[NDArray[Any]]:
         extrinsics: list[NDArray[Any]] = []
+        intrinsics: list[NDArray[Any]] = []
         camera_files = os.listdir(self.cameras_path)
         camera_files.sort()
         for camera_file in camera_files:
             if camera_file[-8:] != "_cam.txt":
                 continue
-            P, _ = self.get_camera_parameters(camera_file)
+            P, K = self.get_camera_parameters(camera_file)
             extrinsics.append(P)
+            intrinsics.append(K)
         return extrinsics
 
-    def get_all_depths(self, scale: bool) -> Dict[int, NDArray[Any]]:
-        gt_depth_files = os.listdir(self.target_depths_path)
-        gt_depth_files = [
-            os.path.join(self.target_depths_path, gdf)
-            for gdf in gt_depth_files
-            if os.path.isfile(os.path.join(self.target_depths_path, gdf))
+    def get_all_depths(self, scene: str) -> Dict[int, NDArray[Any]]:
+        target_depths_path = os.path.join(self.target_depths_path, scene)
+        target_depth_files = os.listdir(target_depths_path)
+        target_depth_files = [
+            os.path.join(target_depths_path, tdf)
+            for tdf in target_depth_files
+            if os.path.isfile(os.path.join(target_depths_path, tdf))
         ]
-        gt_depth_files.sort()
+        target_depth_files.sort()
 
-        gt_depths = {}
-        for gdf in gt_depth_files:
-            ref_ind = int(gdf[-18:-10])
-            gt_depth = self.get_depth(
-                os.path.join(self.target_depths_path, gdf), scale=scale
-            )
-            gt_depths[ref_ind] = gt_depth
-        return gt_depths
+        target_depths = {}
+        for tdf in target_depth_files:
+            ref_ind = int(tdf[-18:-10])
+            target_depth = self.get_depth(os.path.join(self.target_depths_path, tdf))
+
+            # scale and crop depth
+            # crop according to the desired factor of divisibility
+            # (used to make resolution a multiple of self.devisible_factor)
+            target_depth = self.scale_image(target_depth, self.scale)
+            target_depth, _, _ = self.factor_crop(target_depth, self.divisible_factor)
+
+            target_depths[ref_ind] = target_depth
+        return target_depths

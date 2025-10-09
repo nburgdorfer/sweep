@@ -37,7 +37,6 @@ class BaseDataset(Dataset[dict[str, Any]]):
         self.scenes = scenes
         self.divisible_factor = self.cfg["camera"]["divisible_factor"]
         self.png_depth_scale: float | None = None
-        
 
         try:
             self.resolution_levels = len(self.cfg["model"]["feature_channels"])
@@ -64,8 +63,14 @@ class BaseDataset(Dataset[dict[str, Any]]):
             self.H = self.random_crop_height
             self.W = self.random_crop_width
         else:
-            self.H = int((self.cfg["camera"]["height"]* self.scale // self.divisible_factor) * self.divisible_factor) 
-            self.W = int((self.cfg["camera"]["width"]* self.scale // self.divisible_factor) * self.divisible_factor)
+            self.H = int(
+                (self.cfg["camera"]["height"] * self.scale // self.divisible_factor)
+                * self.divisible_factor
+            )
+            self.W = int(
+                (self.cfg["camera"]["width"] * self.scale // self.divisible_factor)
+                * self.divisible_factor
+            )
 
         self.samples, self.frame_count = self.build_samples()
 
@@ -152,7 +157,9 @@ class BaseDataset(Dataset[dict[str, Any]]):
         for _ in range(iterations):
             crop_row = np.random.randint(0, depth.shape[0] - crop_height)
             crop_col = np.random.randint(0, depth.shape[1] - crop_width)
-            cropped_depth = self.custom_crop(depth, crop_row, crop_col, crop_height, crop_width)
+            cropped_depth = self.custom_crop(
+                depth, crop_row, crop_col, crop_height, crop_width
+            )
 
             if np.any(cropped_depth > 0.0):
                 return crop_row, crop_col
@@ -171,7 +178,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
 
         return image.astype(np.float32)
 
-    def get_depth(self, depth_file: str, scale: bool = True) -> NDArray[np.float32]:
+    def get_depth(self, depth_file: str) -> NDArray[np.float32]:
         if depth_file[-3:] == "pfm":
             depth = read_pfm(depth_file)
         elif self.png_depth_scale is not None:
@@ -201,11 +208,11 @@ class BaseDataset(Dataset[dict[str, Any]]):
 
             P_i, K_i = self.get_camera_parameters(sample["camera_files"][i])
 
-            if i==0:
+            if i == 0:
                 target_depth = self.get_depth(sample["depth_files"][i])
 
             if self.random_crop:
-                if i==0:
+                if i == 0:
                     # random crop images
                     crop_row, crop_col = self.get_valid_random_crop(
                         target_depth, self.random_crop_height, self.random_crop_width
@@ -218,7 +225,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
                         self.random_crop_height,
                         self.random_crop_width,
                     )
-                
+
                 K_i = crop_intrinsics(K_i, crop_row, crop_col)
                 image = self.custom_crop(
                     image,
@@ -232,7 +239,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
                 K = scale_intrinsics(K_i, scale=self.scale)
                 image = self.scale_image(image, self.scale)
 
-                if i==0:
+                if i == 0:
                     target_depth = self.scale_image(target_depth, self.scale)
 
             # crop according to the desired factor of divisibility
@@ -242,12 +249,14 @@ class BaseDataset(Dataset[dict[str, Any]]):
             image = self.normalize(image)
             image = np.moveaxis(image, [0, 1, 2], [1, 2, 0])
 
-            if i==0:
+            if i == 0:
                 assert target_depth is not None
-                target_depth = self.center_crop(target_depth, crop_size=(crop_h, crop_w))
+                target_depth = self.center_crop(
+                    target_depth, crop_size=(crop_h, crop_w)
+                )
                 target_depth = target_depth.reshape(
                     1, target_depth.shape[0], target_depth.shape[1]
-                )            
+                )
 
             images[i] = image
             extrinsics[i] = P_i
@@ -281,7 +290,9 @@ class BaseDataset(Dataset[dict[str, Any]]):
 
             multires_intrinsics = []
             for i in range(self.num_frame):
-                multires_intrinsics.append(intrinsic_pyramid(intrinsics[0], self.resolution_levels))
+                multires_intrinsics.append(
+                    intrinsic_pyramid(intrinsics[0], self.resolution_levels)
+                )
 
             data["multires_intrinsics"] = np.stack(multires_intrinsics).astype(
                 np.float32

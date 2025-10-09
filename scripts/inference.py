@@ -61,7 +61,7 @@ for i, scene in enumerate(scenes):
         "rgb": pipeline.image_path,
     }
     mae, auc, percentages = eval_2d(
-        paths, pipeline.inference_dataset, pipeline.vis_path, scale=False
+        paths, pipeline.inference_dataset, scene, pipeline.vis_path
     )
     avg_mae[i] = mae
     avg_auc[i] = auc
@@ -74,6 +74,7 @@ for i, scene in enumerate(scenes):
         pipeline.depth_path,
         pipeline.conf_path,
         pipeline.image_path,
+        pipeline.camera_path,
         pipeline.output_path,
         pipeline.inference_dataset,
         scene,
