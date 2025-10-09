@@ -28,7 +28,7 @@ class Network(nn.Module):
         self.feature_encoder = FPN(
             in_channels=3,
             out_channels=self.feature_channels,
-            base_channels=4,
+            base_channels=8,
             levels=4,
             block_size=3,
         )
@@ -36,7 +36,7 @@ class Network(nn.Module):
         #### Cost Volume Regularizers
         self.cost_reg = nn.ModuleList(
             [
-                CostRegNet(self.group_channels[i], 4)
+                CostRegNet(self.group_channels[i], 8)
                 for i in range(self.resolution_levels)
             ]
         )
