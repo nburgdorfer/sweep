@@ -42,8 +42,8 @@ optimizer:
 point_cloud:
   image_region_th: 2
   depth_region_th: 2
-  pix_th: 0.35
-  prob_th: 0.35
+  pix_th: 0.50
+  prob_th: 0.45
   num_consistent: 3
   mask_th: 20
   max_dist: 0.2
