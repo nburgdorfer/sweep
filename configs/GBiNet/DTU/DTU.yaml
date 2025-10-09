@@ -1,7 +1,7 @@
 # data_path: /home/nburgdor/data/DTU/
 # output_path: /home/nburgdor/Results/DTU/GBiNet/
 data_path: /mnt/Drive2/DTU/
-output_path: /mnt/Drive1/Results/DTU/GBiNet_7_staged/
+output_path: /mnt/Drive1/Results/DTU/GBiNet_8/
 device: cuda:0
 seed: 43
 num_workers: 4
@@ -15,7 +15,7 @@ camera:
     baseline_mode: min
 
 inference:
-    ckpt_file: pretrained_models/model_GBiNet_DTU_7_staged.pt
+    ckpt_file: pretrained_models/model_GBiNet_DTU_8.pt
     frame_spacing: 1
     num_frame: 5
     sample_mode: cluster
@@ -25,7 +25,7 @@ inference:
 
 loss:
     weights: [1,1,1,1]
-    rmse_weight: 0.01
+    # rmse_weight: 0.01
 
 model:
     feature_channels: [8, 16, 32, 64] # fine -> coarse
@@ -35,7 +35,7 @@ model:
     stage_intervals: [2,4,6]
 
 optimizer:
-    grad_clip: 100.0
+    grad_clip: 1000.0
     learning_rate: 0.0001
     eta_min: 0.0000001
 
@@ -52,12 +52,10 @@ point_cloud:
   resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
-    batch_size: 8
+    batch_size: 2
     ckpt_file: 
     epochs: 16
     frame_spacing: 1
-    max_training_samples:
-    max_val_samples:
     num_frame: 5
     random_crop:
         enable: True
@@ -65,7 +63,7 @@ training:
         width: 640
     sample_mode: cluster
     scale: 1.0
-    visualize: False
+    visualize: True
     vis_freq: 100
 
 visualization:
