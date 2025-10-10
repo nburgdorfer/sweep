@@ -1,7 +1,7 @@
 # data_path: /home/nburgdor/data/DTU/
-# output_path: /home/nburgdor/Results/DTU/GBiNet/
+# output_path: /home/nburgdor/Results/DTU/MVANet/
 data_path: /mnt/Drive2/DTU/
-output_path: /mnt/Drive1/Results/DTU/GBiNet_8/
+output_path: /mnt/Drive1/Results/DTU/MVANet_8/
 device: cuda:0
 seed: 43
 num_workers: 4
@@ -15,7 +15,7 @@ camera:
     baseline_mode: min
 
 inference:
-    ckpt_file: pretrained_models/model_GBiNet_DTU_8.pt
+    ckpt_file: pretrained_models/model_MVANet_DTU.pt
     frame_spacing: 1
     num_frame: 5
     sample_mode: cluster
@@ -52,7 +52,7 @@ point_cloud:
   resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
-    batch_size: 2
+    batch_size: 1
     ckpt_file: 
     epochs: 30
     frame_spacing: 1

@@ -198,6 +198,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
         sample = self.samples[idx]
 
         images = [None] * self.num_frame
+        target_depths = [None] * self.num_frame
         extrinsics = [None] * self.num_frame
         intrinsics = [None] * self.num_frame
         target_depth = None
@@ -205,11 +206,8 @@ class BaseDataset(Dataset[dict[str, Any]]):
         crop_col = 0
         for i in range(len(sample["frame_inds"])):
             image = self.get_image(sample["image_files"][i])
-
+            target_depth = self.get_depth(sample["depth_files"][i])
             P_i, K_i = self.get_camera_parameters(sample["camera_files"][i])
-
-            if i == 0:
-                target_depth = self.get_depth(sample["depth_files"][i])
 
             if self.random_crop:
                 if i == 0:
@@ -218,13 +216,13 @@ class BaseDataset(Dataset[dict[str, Any]]):
                         target_depth, self.random_crop_height, self.random_crop_width
                     )
 
-                    target_depth = self.custom_crop(
-                        target_depth,
-                        crop_row,
-                        crop_col,
-                        self.random_crop_height,
-                        self.random_crop_width,
-                    )
+                target_depth = self.custom_crop(
+                    target_depth,
+                    crop_row,
+                    crop_col,
+                    self.random_crop_height,
+                    self.random_crop_width,
+                )
 
                 K_i = crop_intrinsics(K_i, crop_row, crop_col)
                 image = self.custom_crop(
@@ -238,9 +236,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
             elif self.scale < 1.0:
                 K = scale_intrinsics(K_i, scale=self.scale)
                 image = self.scale_image(image, self.scale)
-
-                if i == 0:
-                    target_depth = self.scale_image(target_depth, self.scale)
+                target_depth = self.scale_image(target_depth, self.scale)
 
             # crop according to the desired factor of divisibility
             # (used to make resolution a multiple of self.devisible_factor)
@@ -248,20 +244,20 @@ class BaseDataset(Dataset[dict[str, Any]]):
             K_i = crop_intrinsics(K_i, crop_h // 2, crop_w // 2)
             image = self.normalize(image)
             image = np.moveaxis(image, [0, 1, 2], [1, 2, 0])
-
-            if i == 0:
-                assert target_depth is not None
-                target_depth = self.center_crop(
-                    target_depth, crop_size=(crop_h, crop_w)
-                )
-                target_depth = target_depth.reshape(
-                    1, target_depth.shape[0], target_depth.shape[1]
-                )
+            
+            target_depth = self.center_crop(
+                target_depth, crop_size=(crop_h, crop_w)
+            )
+            target_depth = target_depth.reshape(
+                1, target_depth.shape[0], target_depth.shape[1]
+            )
 
             images[i] = image
+            target_depths[i] = target_depth
             extrinsics[i] = P_i
             intrinsics[i] = K_i
         images = np.asarray(images, dtype=np.float32)
+        target_depths = np.asarray(target_depths, dtype=np.float32)
         extrinsics = np.asarray(extrinsics, dtype=np.float32)
         intrinsics = np.asarray(intrinsics, dtype=np.float32)
 
@@ -275,7 +271,8 @@ class BaseDataset(Dataset[dict[str, Any]]):
         data["extrinsics"] = extrinsics
         # data["intrinsics"] = intrinsics
         data["K"] = intrinsics[0]
-        data["target_depth"] = target_depth
+        data["target_depth"] = target_depths[0]
+        data["all_target_depths"] = target_depths
         if self.cfg["camera"]["baseline_mode"] == "min":
             data["baseline"] = min_baseline
         elif self.cfg["camera"]["baseline_mode"] == "max":

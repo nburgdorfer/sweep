@@ -1,7 +1,10 @@
 from typing import Any
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from torchvision.ops import DeformConv2d as _DeformConv2D
 
 # from torchsparse import nn as spnn
 
@@ -164,6 +167,46 @@ class ConvTranspose2d(nn.Module):
 # raise Exception(f"ERROR: Unknown nonlinearity function: '{self.nonlinearity}'")
 
 #         return out
+
+
+class DeformConv2d(nn.Module):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 3,
+        stride: int = 1,
+        padding: int = 1,
+        deform_groups: int = 1,
+    ):
+        super(DeformConv2d, self).__init__()
+
+        self.conv = _DeformConv2D(
+            in_channels,
+            out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=1,
+        )
+
+        self.offset = nn.Conv2d(
+            in_channels,
+            deform_groups * 2 * kernel_size * kernel_size,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            bias=True,
+        )
+
+        self.init_offset()
+
+    def init_offset(self):
+        self.offset.weight.data.zero_()
+        self.offset.bias.data.zero_()
+
+    def forward(self, tensor):
+        offset = self.offset(tensor)
+        return self.conv(tensor, offset)
 
 
 #############################################
