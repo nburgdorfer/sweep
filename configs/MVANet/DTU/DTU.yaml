@@ -53,7 +53,7 @@ point_cloud:
 
 training:
     batch_size: 1
-    ckpt_file: 
+    ckpt_file: pretrained_models/model_GBiNet_DTU_9_16ep.pt
     epochs: 30
     frame_spacing: 1
     num_frame: 5
