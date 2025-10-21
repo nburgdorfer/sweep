@@ -31,12 +31,12 @@ model:
     feature_channels: [8, 16, 32, 64] # fine -> coarse
     group_channels: [4,8,8,8] # fine -> coarse
     resolution_stages: [3,3,2,2,1,1,0,0] # The resolution stages for each iteration (0 is the largest)
-    stage_training: True
+    stage_training: False
     stage_intervals: [2,4,6]
 
 optimizer:
-    grad_clip: 1000.0
-    learning_rate: 0.0001
+    grad_clip: 100.0
+    learning_rate: 0.00003
     # eta_min: 0.0000001
 
 point_cloud:
@@ -59,8 +59,8 @@ training:
     num_frame: 5
     random_crop:
         enable: True
-        height: 512
-        width: 640
+        height: 256
+        width: 320
     sample_mode: cluster
     scale: 1.0
     visualize: True

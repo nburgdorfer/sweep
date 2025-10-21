@@ -193,7 +193,7 @@ wheels = [
 
 [[package]]
 name = "cvtkit"
-version = "0.0.57"
+version = "0.0.58"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "matplotlib" },
@@ -209,7 +209,7 @@ dependencies = [
     { name = "torchvision" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ff/59/38af597e50120769e1d59e46bd3ba7a42ce79936b417f398dada6b1ed58b/cvtkit-0.0.57.tar.gz", hash = "sha256:3424744ea0b14a9288b728d372238ac17c1d8e982bc8b757a0bcc1645c3bcb1f", size = 79466, upload-time = "2025-10-09T15:48:01.929Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/70/13/0649de10ce323f448d51cae9eb3c80b0de8610a5512dede843f669db8d8c/cvtkit-0.0.58.tar.gz", hash = "sha256:17f18dacb9cdf37e9e66fda70f6321fb9c7c936204bebbcb9c252693ba780db7", size = 79395, upload-time = "2025-10-21T16:48:13.355Z" }
 
 [[package]]
 name = "cycler"
@@ -1504,7 +1504,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cvtkit", specifier = "==0.0.57" },
+    { name = "cvtkit", specifier = "==0.0.58" },
     { name = "h5py", specifier = "==3.14.0" },
     { name = "matplotlib", specifier = ">=3.10.5" },
     { name = "numpy", specifier = ">=2.3.2" },

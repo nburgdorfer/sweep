@@ -142,7 +142,7 @@ class Network(nn.Module):
         #### Cost Regularization ####
         cost_volume = self.cost_reg[resolution_stage](cost_volume)
         cost_volume = cost_volume.squeeze(1)
-        # cost_volume = torch.softmax(cost_volume, dim=1)
+        
 
         # gather depth and subdivide depth hypotheses
         pred_hypo_index = torch.argmax(cost_volume, dim=1).to(torch.int64)
@@ -152,18 +152,18 @@ class Network(nn.Module):
         )
 
         # upsample depth and confidence maps to full resolution
-        with torch.no_grad():
-            depth = torch.gather(hypotheses, dim=1, index=pred_hypo_index.unsqueeze(1))
-            confidence = torch.max(
-                torch.softmax(cost_volume, dim=1), dim=1, keepdim=True
-            )[0]
-            if (height, width) != (self.height, self.width):
-                depth = F.interpolate(
-                    depth, size=(self.height, self.width), mode="bilinear"
-                )
-                confidence = F.interpolate(
-                    confidence, size=(self.height, self.width), mode="bilinear"
-                )
+        depth = (torch.softmax(cost_volume, dim=1)*hypotheses).sum(dim=1, keepdim=True)
+        # depth = torch.gather(hypotheses, dim=1, index=pred_hypo_index.unsqueeze(1))
+        confidence = torch.max(
+            torch.softmax(cost_volume, dim=1), dim=1, keepdim=True
+        )[0]
+        if (height, width) != (self.height, self.width):
+            depth = F.interpolate(
+                depth, size=(self.height, self.width), mode="bilinear"
+            )
+            confidence = F.interpolate(
+                confidence, size=(self.height, self.width), mode="bilinear"
+            )
 
         # # Depth Refinement
         # if final_iteration:

@@ -2,10 +2,12 @@
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
+import sys
 
 from cvtkit.common import to_gpu, build_labels
+from cvtkit.geometry import project_depth_map
 from cvtkit.visualization import visualize_mvs
-from cvtkit.metrics import RMSE
+from cvtkit.metrics import RMSE, chamfer_accuracy, chamfer_completeness
 
 ## Custom libraries
 from src.pipelines.BasePipeline import BasePipeline
@@ -44,7 +46,7 @@ class Pipeline(BasePipeline):
     def get_network(self):
         return Network(self.cfg).to(self.device)
 
-    def compute_loss(self, data, output, resolution_stage, final_iteration):
+    def compute_loss_MVS(self, data, output, resolution_stage, final_iteration):
         loss = {}
         target_depth = data["target_depths"][resolution_stage]
         target_labels, mask = build_labels(target_depth, output["hypotheses"])
@@ -67,6 +69,40 @@ class Pipeline(BasePipeline):
         loss["cov_percent"] = mask.sum() / (
             torch.where(target_depth > 0, 1, 0).sum() + 1e-10
         )
+        return loss
+
+    def compute_loss_chamfer(self, output_depth_maps: list[torch.Tensor], output_confidence_maps, data):
+        loss = {}
+        
+        num_views = len(output_depth_maps)
+
+        # project depth maps
+        est_points = None
+        target_points = None
+        for i in range(num_views):
+            est_points_i = project_depth_map(output_depth_maps[i].squeeze(1), data["extrinsics"][:,i], data["K"])
+            if est_points is None:
+                est_points = est_points_i
+            else:
+                est_points = torch.cat((est_points, est_points_i), dim=1)
+
+            target_points_i = project_depth_map(data["all_target_depths"][:,i].squeeze(1), data["extrinsics"][:,i], data["K"])
+            if target_points is None:
+                target_points = target_points_i
+            else:
+                target_points = torch.cat((target_points, target_points_i), dim=1)
+
+        assert est_points is not None
+        assert target_points is not None
+
+        # accuracy
+        accuracy = chamfer_accuracy(est_points, target_points)
+
+        # completeness
+        completeness = chamfer_completeness(est_points, target_points)        
+
+        loss["total"] = accuracy.mean() + completeness.mean()
+        
         return loss
 
     def compute_stats(self, data, output):
@@ -142,6 +178,7 @@ class Pipeline(BasePipeline):
                 num_views = data["images"].shape[1]
                 output_depth_maps = []
                 output_confidence_maps = []
+                loss = {}
                 for i in range(num_views):
                     if i != 0:
                         (data["images"], data["extrinsics"], data["all_target_depths"]) = (
@@ -159,7 +196,6 @@ class Pipeline(BasePipeline):
                         device=self.device,
                     )
                     output = {}
-                    loss = {}
                     num_stages = len(self.resolution_stages)
                     for iteration, resolution_stage in enumerate(
                         self.resolution_stages
@@ -169,6 +205,8 @@ class Pipeline(BasePipeline):
                             and (resolution_stage < self.current_resolution)
                             and (mode != "inference")
                         ):
+                            output_depth_maps.append(output["final_depth"])
+                            output_confidence_maps.append(torch.clip(confidence.div_(iteration+1), 0.0, 1.0))
                             break
 
                         # Run network forward pass
@@ -188,96 +226,48 @@ class Pipeline(BasePipeline):
                             ]
                         if iteration == num_stages-1:
                             output_depth_maps.append(output["final_depth"])
-                            output_confidence_maps.append(torch.clip(confidence.div_(num_stages), 0.0, 1.0))
+                            output_confidence_maps.append(torch.clip(confidence.div_(iteration+1), 0.0, 1.0))
 
-                        if mode != "inference":
-                            # Compute loss
-                            loss = self.compute_loss(
-                                data,
-                                output,
-                                resolution_stage,
-                                final_iteration=(iteration == (num_stages - 1)),
-                            )
 
-                            # Compute backward pass
-                            if mode != "validation":
-                                loss["total"].backward()
-                                torch.nn.utils.clip_grad_norm_(
-                                    self.model.parameters(),
-                                    self.cfg["optimizer"]["grad_clip"],
-                                )
-                                self.optimizer.step()
-                                self.optimizer.zero_grad()
+                if mode != "inference":
+                    loss = self.compute_loss_chamfer(output_depth_maps, output_confidence_maps, data)
 
-                    # confidence average
-                    output[f"confidence"] = torch.clip(
-                        confidence.div_(num_stages), 0.0, 1.0
+                    # Compute backward pass
+                    if mode != "validation":
+                        loss["total"].backward()
+                        torch.nn.utils.clip_grad_norm_(
+                            self.model.parameters(),
+                            self.cfg["optimizer"]["grad_clip"],
+                        )
+                        self.optimizer.step()
+                        self.optimizer.zero_grad()
+
+                
+                
+                    # Update progress bar
+                    sums["loss"] += float(loss["total"].detach().cpu().item())
+                    max_mem = torch.cuda.max_memory_allocated(device=self.device)
+                    max_mem = float(max_mem / 1.073742e9)
+                    loader.set_postfix(
+                        loss=f"{(sums['loss']/(batch_ind+1)):6.2f}",
+                        max_memory=f"{(max_mem):2.3f}",
                     )
 
-                    stats = {}
-                    if mode != "inference":
-                        # Compute output statistics
-                        stats = self.compute_stats(data, output)
+                    ## Log loss and statistics
+                    iteration = (len(loader) * (epoch)) + batch_ind
+                    self.logger.add_scalar(
+                        f"{mode} - Loss",
+                        float(loss["total"].detach().cpu().item()),
+                        iteration,
+                    )
+                    self.logger.add_scalar(
+                        f"{mode} - Max Memory", float(max_mem), iteration
+                    )
 
-                        # Update progress bar
-                        sums["loss"] += float(loss["total"].detach().cpu().item())
-                        sums["cov_percent"] += float(
-                            loss["cov_percent"].detach().cpu().item()
-                        )
-                        sums["mae"] += float(stats["mae"].detach().cpu().item())
-                        sums["acc"] += float(stats["acc"].detach().cpu().item())
-                        max_mem = torch.cuda.max_memory_allocated(device=self.device)
-                        max_mem = float(max_mem / 1.073742e9)
-                        loader.set_postfix(
-                            loss=f"{(sums['loss']/(batch_ind+1)):6.2f}",
-                            cover=f"{(sums['cov_percent']/(batch_ind+1))*100:6.2f}%",
-                            mae=f"{(sums['mae']/(batch_ind+1)):6.2f}",
-                            acc_1cm=f"{(sums['acc']/(batch_ind+1))*100:3.2f}%",
-                            max_memory=f"{(max_mem):2.3f}",
-                            current_resolution=f"{self.current_resolution:d}",
-                        )
-
-                        ## Log loss and statistics
-                        iteration = (len(loader) * (epoch)) + batch_ind
-                        self.logger.add_scalar(
-                            f"{mode} - Loss",
-                            float(loss["total"].detach().cpu().item()),
-                            iteration,
-                        )
-                        self.logger.add_scalar(
-                            f"{mode} - Mean Average Error",
-                            float(stats["mae"].detach().cpu().item()),
-                            iteration,
-                        )
-                        self.logger.add_scalar(
-                            f"{mode} - Accuracy",
-                            float(stats["acc"].detach().cpu().item()) * 100,
-                            iteration,
-                        )
-                        self.logger.add_scalar(
-                            f"{mode} - Max Memory", float(max_mem), iteration
-                        )
-
-                    else:
-                        # Store network output
-                        self.save_output(data, output, int(data["ref_id"][0]))
-
-                    ## Visualization
-                    if visualize and batch_ind % vis_freq == 0:
-                        visualize_mvs(
-                            data,
-                            output,
-                            batch_ind,
-                            vis_path,
-                            self.cfg["visualization"]["max_depth_error"],
-                            mode=mode,
-                            epoch=epoch,
-                        )
-
-                    if mode != "inference":
-                        del loss
-                        del output
-                        del data
-                        del stats
-                        torch.cuda.empty_cache()
-                sys.exit()
+                
+            
+                    del loss
+                    del output_depth_maps
+                    del output_confidence_maps
+                    del data
+                    torch.cuda.empty_cache()
