@@ -71,7 +71,7 @@ class Pipeline(BasePipeline):
         )
         return loss
 
-    def compute_loss_chamfer(self, output_depth_maps: list[torch.Tensor], output_confidence_maps, data):
+    def compute_loss_chamfer(self, output_depth_maps: list[torch.Tensor], output_confidence_maps, data, acc_th=5.0):
         loss = {}
         
         num_views = len(output_depth_maps)
@@ -99,9 +99,11 @@ class Pipeline(BasePipeline):
         accuracy = chamfer_accuracy(est_points, target_points)
 
         # completeness
-        completeness = chamfer_completeness(est_points, target_points)        
+        completeness = chamfer_completeness(est_points, target_points)
 
-        loss["total"] = accuracy.mean() + completeness.mean()
+        acc_mask = torch.where(accuracy < acc_th, 1.0, 0.0)
+
+        loss["total"] = (accuracy * acc_mask).mean() + completeness.mean()
         
         return loss
 
