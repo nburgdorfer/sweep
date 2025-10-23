@@ -114,7 +114,6 @@ class Pipeline(BasePipeline):
 
         # mask out points with far away
         accuracy = accuracy * torch.where(accuracy < acc_th, 1.0, 0.0)
-        completeness = completeness * torch.where(completeness < acc_th, 1.0, 0.0)
 
         # ##### VIS #####
         # write_ply(f"plys/acc_{self.ply_index:08d}.ply", est_points[0], accuracy[0])
