@@ -54,7 +54,7 @@ training:
     ckpt_file: pretrained_models/model_GBiNet_DTU_9_16ep.pt
     epochs: 8
     frame_spacing: 1
-    num_frame: 2
+    num_frame: 3
     random_crop:
         enable: True
         height: 512
