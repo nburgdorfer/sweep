@@ -2,10 +2,12 @@ import numpy as np
 from torch import Tag
 from torch.utils.data import Dataset
 import cv2
+import open3d as o3d
 
 from typing import Any
 from numpy.typing import NDArray
 
+from cvtkit.geometry import project_depth_map_np
 from cvtkit.io import read_pfm
 from cvtkit.camera import (
     compute_baselines,
@@ -37,6 +39,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
         self.scenes = scenes
         self.divisible_factor = self.cfg["camera"]["divisible_factor"]
         self.png_depth_scale: float | None = None
+        self.gt_mode = self.cfg["training"].get("gt_mode", "depth")
 
         try:
             self.resolution_levels = len(self.cfg["model"]["feature_channels"])
@@ -197,6 +200,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
         idx = idx % self.__len__()
         sample = self.samples[idx]
 
+        target_points = None
         images = [None] * self.num_frame
         target_depths = [None] * self.num_frame
         extrinsics = [None] * self.num_frame
@@ -233,7 +237,14 @@ class BaseDataset(Dataset[dict[str, Any]]):
                     self.random_crop_width,
                 )
 
+                if self.gt_mode == "points":
+                    K_i_p = np.copy(K_i)
+                    target_depth_p = np.copy(target_depth)
+
             elif self.scale < 1.0:
+                if self.gt_mode == "points":
+                    K_i_p = np.copy(K_i)
+                    target_depth_p = np.copy(target_depth)
                 K_i = scale_intrinsics(K_i, scale=self.scale)
                 image = self.scale_image(image, self.scale)
                 target_depth = self.scale_image(target_depth, self.scale)
@@ -252,6 +263,15 @@ class BaseDataset(Dataset[dict[str, Any]]):
                 1, target_depth.shape[0], target_depth.shape[1]
             )
 
+            if self.gt_mode == "points":
+                target_depth_p, crop_h_p, crop_w_p = self.factor_crop(target_depth_p, self.divisible_factor)
+                K_i_p = crop_intrinsics(K_i_p, crop_h_p // 2, crop_w_p // 2)
+                points_i = project_depth_map_np(target_depth_p, P_i, K_i_p)
+                if target_points is None:
+                    target_points = points_i
+                else:
+                    target_points = np.concatenate((target_points,points_i), axis=0)
+
             images[i] = image
             target_depths[i] = target_depth
             extrinsics[i] = P_i
@@ -260,6 +280,12 @@ class BaseDataset(Dataset[dict[str, Any]]):
         target_depths = np.asarray(target_depths, dtype=np.float32)
         extrinsics = np.asarray(extrinsics, dtype=np.float32)
         intrinsics = np.asarray(intrinsics, dtype=np.float32)
+        
+        if self.gt_mode == "points":
+            cloud = o3d.geometry.PointCloud()
+            cloud.points = o3d.utility.Vector3dVector(target_points)
+            cloud = cloud.voxel_down_sample(0.5)
+            target_points = np.asarray(cloud.points)
 
         # compute min and max camera baselines
         min_baseline, max_baseline = compute_baselines(extrinsics)
@@ -271,12 +297,16 @@ class BaseDataset(Dataset[dict[str, Any]]):
         data["extrinsics"] = extrinsics
         # data["intrinsics"] = intrinsics
         data["K"] = intrinsics[0]
-        data["target_depth"] = target_depths[0]
-        data["all_target_depths"] = target_depths
+
         if self.cfg["camera"]["baseline_mode"] == "min":
             data["baseline"] = min_baseline
         elif self.cfg["camera"]["baseline_mode"] == "max":
             data["baseline"] = max_baseline
+        data["target_depth"] = target_depths[0]
+        data["all_target_depths"] = target_depths
+
+        if self.gt_mode == "points":
+            data["target_points"] = target_points
 
         ## Scaling intrinsics for the feature pyramid
         if self.resolution_levels > 1:

@@ -32,8 +32,8 @@ model:
 
 optimizer:
     grad_clip: 100.0
-    learning_rate: 0.0001
-    weight_decay: 0.001
+    learning_rate: 0.00003
+    weight_decay: 0.01
     milestones: [2, 4, 6, 8]
     gamma: 0.5
 
@@ -54,13 +54,14 @@ training:
     ckpt_file: pretrained_models/model_GBiNet_DTU_9_16ep.pt
     epochs: 8
     frame_spacing: 1
+    gt_mode: points
     num_frame: 3
     random_crop:
-        enable: True
+        enable: False
         height: 512
         width: 640
     sample_mode: cluster
-    scale: 1.0
+    scale: 0.25
     visualize: True
     vis_freq: 100
 
