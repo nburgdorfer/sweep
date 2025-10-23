@@ -1,8 +1,6 @@
 # Python libraries
 import torch
-import torch.nn.functional as F
 from tqdm import tqdm
-import sys
 import cv2
 
 from cvtkit.common import to_gpu, build_labels
