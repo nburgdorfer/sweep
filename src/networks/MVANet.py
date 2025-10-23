@@ -1,3 +1,6 @@
+""""""
+
+import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -51,15 +54,22 @@ class Network(nn.Module):
         # #### Depth Refiner
         # self.refiner = BasicRefiner(in_channels=4, c=8)
 
-    def build_features(self, data, resolution_level):
-        views = data["images"].shape[1]
+    def build_features(self, data):
+        num_views = data["images"].shape[1]
         images = data["images"]
 
-        image_features = []
-        for i in range(views):
-            image_i = images[:, i]
-            image_features.append(self.feature_encoder(image_i, resolution_level))
-        return image_features
+        multi_res_features = self.feature_encoder(images[:, 0]) # coarse -> fine (highest res is last).
+        for r, features in enumerate(multi_res_features):
+                multi_res_features[r] = multi_res_features[r].unsqueeze(1)
+
+        for v in range(1, num_views):
+            features_v = self.feature_encoder(images[:, v]) # fine -> coarse (lowest res is last).
+
+            # concatenate image features for view v at each resolution level
+            for r, features in enumerate(features_v):
+                multi_res_features[r] = torch.cat((multi_res_features[r], features.unsqueeze(1)), dim=1)
+
+        return multi_res_features
 
     def subdivide_hypotheses(self, hypotheses, pred_hypo_index, iteration):
         with torch.no_grad():
@@ -102,14 +112,32 @@ class Network(nn.Module):
                     )
 
         return next_hypotheses
+    
+    # def set_reference_view(self, data, reference_index):
+    #     assert reference_index >= 0 and reference_index < data.shape[1]
 
-    def forward(self, data, resolution_stage, iteration, final_iteration):
+    #     if reference_index == 0:
+    #         return data
+
+    #     num_views = data.shape[1]
+    #     swap_indices = [reference_index]
+    #     for i in range(num_views):
+    #         if i == reference_index:
+    #             continue
+    #         swap_indices.append(i)
+    #     swap_indices = torch.tensor(swap_indices, dtype=torch.int64, device=data.device)
+        
+    #     return data[:, swap_indices]
+
+    def forward(self, data, resolution_stage, iteration, reference_index):
         batch_size, _, _, height, width = data["images"].shape
         output = {}
 
         # build image features
-        image_features = self.build_features(data, resolution_stage)
-        batch_size, _, height, width = image_features[0].shape
+        if data["image_features"] is None:
+            data["image_features"] = self.build_features(data)
+
+        batch_size, _, _, height, width = data["image_features"][resolution_stage].shape
 
         if iteration == 0:
             hypotheses, _, _ = uniform_hypothesis(
@@ -130,18 +158,18 @@ class Network(nn.Module):
 
         #### Build cost volume ####
         cost_volume = homography_warp(
-            features=image_features,
+            features=data["image_features"][resolution_stage],
             intrinsics=data["multires_intrinsics"][:, :, resolution_stage],
             extrinsics=data["extrinsics"],
             hypotheses=hypotheses,
             group_channels=self.group_channels[resolution_stage],
             vwa_net=self.view_weight_nets[resolution_stage],
+            reference_index=reference_index,
         )
 
         #### Cost Regularization ####
         cost_volume = self.cost_reg[resolution_stage](cost_volume)
         cost_volume = cost_volume.squeeze(1)
-        # cost_volume = torch.softmax(cost_volume, dim=1)
 
         # gather depth and subdivide depth hypotheses
         pred_hypo_index = torch.argmax(cost_volume, dim=1).to(torch.int64)
@@ -151,18 +179,17 @@ class Network(nn.Module):
         )
 
         # upsample depth and confidence maps to full resolution
-        with torch.no_grad():
-            depth = torch.gather(hypotheses, dim=1, index=pred_hypo_index.unsqueeze(1))
-            confidence = torch.max(
-                torch.softmax(cost_volume, dim=1), dim=1, keepdim=True
-            )[0]
-            if (height, width) != (self.height, self.width):
-                depth = F.interpolate(
-                    depth, size=(self.height, self.width), mode="bilinear"
-                )
-                confidence = F.interpolate(
-                    confidence, size=(self.height, self.width), mode="bilinear"
-                )
+        depth = (torch.softmax(cost_volume, dim=1)*hypotheses).sum(dim=1, keepdim=True)
+        confidence = torch.max(
+            torch.softmax(cost_volume, dim=1), dim=1, keepdim=True
+        )[0]
+        if (height, width) != (self.height, self.width):
+            depth = F.interpolate(
+                depth, size=(self.height, self.width), mode="bilinear"
+            )
+            confidence = F.interpolate(
+                confidence, size=(self.height, self.width), mode="bilinear"
+            )
 
         # # Depth Refinement
         # if final_iteration:

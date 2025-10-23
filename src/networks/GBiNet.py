@@ -143,7 +143,6 @@ class Network(nn.Module):
         cost_volume = self.cost_reg[resolution_stage](cost_volume)
         cost_volume = cost_volume.squeeze(1)
         
-
         # gather depth and subdivide depth hypotheses
         pred_hypo_index = torch.argmax(cost_volume, dim=1).to(torch.int64)
         hypotheses = hypotheses.squeeze(1)
@@ -153,7 +152,6 @@ class Network(nn.Module):
 
         # upsample depth and confidence maps to full resolution
         depth = (torch.softmax(cost_volume, dim=1)*hypotheses).sum(dim=1, keepdim=True)
-        # depth = torch.gather(hypotheses, dim=1, index=pred_hypo_index.unsqueeze(1))
         confidence = torch.max(
             torch.softmax(cost_volume, dim=1), dim=1, keepdim=True
         )[0]

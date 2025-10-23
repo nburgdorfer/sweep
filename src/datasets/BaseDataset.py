@@ -234,7 +234,7 @@ class BaseDataset(Dataset[dict[str, Any]]):
                 )
 
             elif self.scale < 1.0:
-                K = scale_intrinsics(K_i, scale=self.scale)
+                K_i = scale_intrinsics(K_i, scale=self.scale)
                 image = self.scale_image(image, self.scale)
                 target_depth = self.scale_image(target_depth, self.scale)
 

@@ -221,7 +221,13 @@ class FPN(nn.Module):
             )
         )
 
-    def forward(self, tensor, resolution_level):
+    def forward(self, tensor, resolution_level=-1):
+        if resolution_level == -1:
+            return self.forward_multi_res(tensor)
+        else:
+            return self.forward_single_res(tensor, resolution_level)
+        
+    def forward_single_res(self, tensor, resolution_level):
         conv0 = self.input_conv(tensor)
 
         # Up Convolution
@@ -230,13 +236,12 @@ class FPN(nn.Module):
             convs.append(self.up_conv[i](convs[i]))
 
         # Lateral Convolution
-        # output_features = []
         lateral_features = convs[3]
         for i in range(self.levels - 1, 0, -1):
             output_features = self.output_conv[i](lateral_features)
 
             # skip computing higher resolution features if they are not needed
-            if i == resolution_level:
+            if resolution_level == i:
                 return output_features
 
             lateral_features = F.interpolate(
@@ -244,3 +249,25 @@ class FPN(nn.Module):
             ) + self.lateral_conv[i - 1](convs[i - 1])
 
         return self.output_conv[0](lateral_features)
+        
+    def forward_multi_res(self, tensor):
+        conv0 = self.input_conv(tensor)
+
+        # Up Convolution
+        convs = [conv0]
+        for i in range(self.levels - 1):
+            convs.append(self.up_conv[i](convs[i]))
+
+        # Lateral Convolution
+        output_features = []
+        lateral_features = convs[3]
+        for i in range(self.levels - 1, 0, -1):
+            output_features.append(self.output_conv[i](lateral_features))
+
+            lateral_features = F.interpolate(
+                convs[i], scale_factor=2, mode="bilinear"
+            ) + self.lateral_conv[i - 1](convs[i - 1])
+
+        output_features.append(self.output_conv[0](lateral_features))
+        return output_features[::-1]
+        
