@@ -83,9 +83,9 @@ class Pipeline(BasePipeline):
         est_points = None
         # target_points = None
         for i in range(num_views):
-            dmap = output_depth_maps[i][0,0].detach().cpu().numpy()
-            dmap = (dmap-dmap.min()) / (dmap.max()-dmap.min()+1e-10)
-            cv2.imwrite(f"plys/{i:03d}_depth_{self.ply_index:06d}.png", dmap*255)
+            # dmap = output_depth_maps[i][0,0].detach().cpu().numpy()
+            # dmap = (dmap-dmap.min()) / (dmap.max()-dmap.min()+1e-10)
+            # cv2.imwrite(f"plys/{i:03d}_depth_{self.ply_index:06d}.png", dmap*255)
 
             gt_mask = torch.where(data["all_target_depths"][:,i].squeeze(1) > 0, 1, 0).to(torch.bool)
             est_points_i = project_depth_map(output_depth_maps[i].squeeze(1), data["extrinsics"][:,i], data["K"], mask=gt_mask)
