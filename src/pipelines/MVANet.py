@@ -104,12 +104,11 @@ class Pipeline(BasePipeline):
         assert target_points is not None
 
         # accuracy
-        accuracy, ret_target_points = chamfer_accuracy(est_points, target_points)
+        accuracy, _ = chamfer_accuracy(est_points, target_points)
         accuracy = torch.norm(accuracy, dim=2)  
         
-
         # # completenesst_p
-        completeness, ret_est_points = chamfer_completeness(est_points, target_points)
+        completeness, _ = chamfer_completeness(est_points, target_points)
         completeness = torch.norm(completeness, dim=2)
 
         # mask out points with far away
@@ -126,13 +125,6 @@ class Pipeline(BasePipeline):
         loss["total"] = accuracy.mean() + completeness.mean()
         loss["acc"] = accuracy.mean()
         loss["comp"] = completeness.mean()
-        
-        # loss["total"] = accuracy.mean()
-        # loss["acc"] = accuracy.mean()
-        # loss["comp"] = torch.tensor(0.0)
-        
-
-        
         
         return loss
 
