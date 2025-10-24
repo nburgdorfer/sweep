@@ -9,7 +9,7 @@ from torchvision.transforms import Resize, InterpolationMode
 
 from cvtkit.common import to_gpu
 from cvtkit.geometry import project_depth_map
-from cvtkit.metrics import chamfer_accuracy, chamfer_completeness
+from cvtkit.metrics import chamfer_accuracy, chamfer_completeness, RMSE
 from cvtkit.camera import scale_intrinsics
 
 ## Custom libraries
@@ -54,9 +54,32 @@ class Pipeline(BasePipeline):
 
 
     def get_network(self):
-        return (Network(self.cfg).to(self.device), BasicRefiner(in_channels=4, c=8).to(self.device))
+        # return (Network(self.cfg).to(self.device), BasicRefiner(in_channels=4, c=8).to(self.device))
+        return [Network(self.cfg).to(self.device)]
+    
+    def compute_loss(self, output_depth_maps, output_confidence_maps, data, scale=0.25):
+        loss = {}
+        batch_size, num_views, height, width = output_depth_maps.shape
+        rmse = None
+        
+        # est_depth_map = self.resize(output_depth_maps[i].squeeze(1))
+        # target_depth_map = self.resize(data["all_target_depths"][:,i].squeeze(1))
+        # K = scale_intrinsics(data["K"], scale=self.loss_scale)
 
-    def compute_loss(self, output_depth_maps: list[torch.Tensor], output_confidence_maps, data, scale=0.25):
+        est_depth_map = output_depth_maps.reshape(batch_size*num_views, height, width)
+        target_depth_map = data["all_target_depths"][:,0].reshape(batch_size*num_views, height, width)
+        
+        if rmse is None:
+            rmse = RMSE(est_depth_map, target_depth_map, mask=torch.where(target_depth_map>0, 1.0, 0.0))
+        else:
+            rmse = rmse + RMSE(est_depth_map, target_depth_map, mask=torch.where(target_depth_map>0, 1.0, 0.0))
+            
+        loss["total"] = rmse
+        loss["acc"] = rmse
+        loss["comp"] = rmse
+        return loss
+
+    def compute_loss_chamfer(self, output_depth_maps: list[torch.Tensor], output_confidence_maps, data, scale=0.25):
         loss = {}
         
         num_views = len(output_depth_maps)
@@ -111,7 +134,7 @@ class Pipeline(BasePipeline):
         
         loss["total"] = accuracy.mean()# + completeness.mean()
         loss["acc"] = accuracy.mean()
-        loss["comp"] = torch.tensor(0.0) #completeness.mean()
+        loss["comp"] = completeness.mean()
         
         return loss
 
@@ -141,10 +164,13 @@ class Pipeline(BasePipeline):
                 to_gpu(data, self.device)
 
                 num_views = data["images"].shape[1]
-                output_depth_maps = []
-                output_confidence_maps = []
+
+                output_depth_maps = None
+                output_confidence_maps = None
                 loss = {}
                 for reference_index in range(num_views):
+                    if reference_index > 0:
+                        break
                     # build image features
                     data["hypotheses"] = [None] * (len(self.resolution_stages))
                     data["image_features"] = None
@@ -164,20 +190,24 @@ class Pipeline(BasePipeline):
                             iteration=iteration,
                             reference_index=reference_index,
                         )
-                        confidence += output["confidence"].detach()
+                        confidence = confidence + output["confidence"].detach()
 
                         if iteration == 0:
                             data["hypotheses"][iteration] = output["hypotheses"]
                         if iteration < num_stages - 1:
                             data["hypotheses"][iteration + 1] = output["next_hypotheses"]
                         if iteration == num_stages-1:
-                            # Depth Refinement    
-                            ref_image =  data["images"][:,0]
-                            output["final_depth"] = self.refiner(ref_image, output["final_depth"])
+                            # # Depth Refinement    
+                            # ref_image =  data["images"][:,0]
+                            # output["final_depth"] = self.refiner(ref_image, output["final_depth"])
 
-                            output_depth_maps.append(output["final_depth"])
-                            output_confidence_maps.append(torch.clip(confidence.div_(iteration+1), 0.0, 1.0))
-                
+                            if output_depth_maps is None:
+                                output_depth_maps = output["final_depth"]
+                                output_confidence_maps = torch.clip(confidence.div_(iteration+1), 0.0, 1.0)
+                            else:
+                                output_depth_maps = torch.cat((output_depth_maps,output["final_depth"]), dim=1)
+                                output_confidence_maps = torch.cat((output_confidence_maps, torch.clip(confidence.div_(iteration+1), 0.0, 1.0)), dim=1)
+
                 # clean up data
                 del data["image_features"]
                 del data["hypotheses"]

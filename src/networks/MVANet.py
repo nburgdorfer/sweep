@@ -165,10 +165,10 @@ class Network(nn.Module):
         )[0]
         if (height, width) != (self.height, self.width):
             depth = F.interpolate(
-                depth, size=(self.height, self.width), mode="bilinear"
+                depth, size=(self.height, self.width), mode="nearest"
             )
             confidence = F.interpolate(
-                confidence, size=(self.height, self.width), mode="bilinear"
+                confidence, size=(self.height, self.width), mode="nearest"
             )
 
         output["hypotheses"] = hypotheses

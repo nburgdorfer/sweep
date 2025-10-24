@@ -29,8 +29,8 @@ model:
     resolution_stages: [3,3,2,2,1,1,0,0] # The resolution stages for each iteration (0 is the largest)
 
 optimizer:
-    grad_clip: 100.0
-    learning_rate: 0.00001
+    grad_clip: 1000.0
+    learning_rate: 0.000000001
     weight_decay: 0.0
     milestones: [2, 4, 6, 8]
     gamma: 0.5
@@ -52,13 +52,13 @@ training:
     ckpt_file: pretrained_models/model_GBiNet_DTU_9_16ep.pt
     epochs: 8
     frame_spacing: 1
-    num_frame: 2
+    num_frame: 5
     random_crop:
         enable: False
         height: 512
         width: 640
     sample_mode: cluster
-    scale: 1.0
+    scale: 0.5
     visualize: True
     vis_freq: 100
 

@@ -40,7 +40,6 @@ optimizer:
     weight_decay: 0.01
     milestones: [10, 12, 14]
     gamma: 0.5
-    # eta_min: 0.0000001
 
 point_cloud:
   image_region_th: 2

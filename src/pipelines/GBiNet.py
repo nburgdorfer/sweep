@@ -58,12 +58,13 @@ class Pipeline(BasePipeline):
 
         error = F.cross_entropy(cost_volume, target_labels, reduction="mean")
 
-        # # compute depth rmse loss on final resolution depth map
-        # if final_iteration:
-        #     final_depth = output["final_depth"]
-        #     rmse = RMSE(final_depth, target_depth, mask=torch.where(target_depth>0, 1.0, 0.0))
-        #     rmse = rmse * self.cfg["loss"]["rmse_weight"]
-        #     error += rmse
+        # compute depth rmse loss on final resolution depth map
+        if final_iteration:
+            final_depth = output["final_depth"]
+            rmse = RMSE(final_depth, target_depth, mask=torch.where(target_depth>0, 1.0, 0.0))
+            rmse = rmse * self.cfg["loss"]["rmse_weight"]
+            error += rmse
+            loss["rmse"] = rmse
 
         loss["total"] = error * self.loss_weights[resolution_stage]
         loss["cov_percent"] = mask.sum() / (
@@ -110,7 +111,7 @@ class Pipeline(BasePipeline):
             vis_freq = self.cfg["training"]["vis_freq"]
             vis_path = self.log_vis
             title_suffix = f" - Epoch {epoch}"
-        sums = {"loss": 0.0, "cov_percent": 0.0, "mae": 0.0, "acc": 0.0}
+        sums = {"loss": 0.0, "rmse": 0.0, "cov_percent": 0.0, "mae": 0.0, "acc": 0.0}
 
         with tqdm(
             data_loader, desc=f"GBiNet {mode}{title_suffix}", unit="batch"
@@ -181,6 +182,7 @@ class Pipeline(BasePipeline):
 
                     # Update progress bar
                     sums["loss"] += float(loss["total"].detach().cpu().item())
+                    sums["rmse"] += float(loss["rmse"].detach().cpu().item())
                     sums["cov_percent"] += float(
                         loss["cov_percent"].detach().cpu().item()
                     )
@@ -190,6 +192,7 @@ class Pipeline(BasePipeline):
                     max_mem = float(max_mem / 1.073742e9)
                     loader.set_postfix(
                         loss=f"{(sums['loss']/(batch_ind+1)):6.2f}",
+                        rmse=f"{(sums['rmse']/(batch_ind+1)):6.2f}",
                         cover=f"{(sums['cov_percent']/(batch_ind+1))*100:6.2f}%",
                         mae=f"{(sums['mae']/(batch_ind+1)):6.2f}",
                         acc_1cm=f"{(sums['acc']/(batch_ind+1))*100:3.2f}%",
@@ -202,6 +205,11 @@ class Pipeline(BasePipeline):
                     self.logger.add_scalar(
                         f"{mode} - Loss",
                         float(loss["total"].detach().cpu().item()),
+                        iteration,
+                    )
+                    self.logger.add_scalar(
+                        f"{mode} - RMSE",
+                        float(loss["rmse"].detach().cpu().item()),
                         iteration,
                     )
                     self.logger.add_scalar(

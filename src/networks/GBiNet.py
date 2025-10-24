@@ -157,16 +157,16 @@ class Network(nn.Module):
         )[0]
         if (height, width) != (self.height, self.width):
             depth = F.interpolate(
-                depth, size=(self.height, self.width), mode="bilinear"
+                depth, size=(self.height, self.width), mode="nearest"
             )
             confidence = F.interpolate(
-                confidence, size=(self.height, self.width), mode="bilinear"
+                confidence, size=(self.height, self.width), mode="nearest"
             )
 
-        # # Depth Refinement
-        # if final_iteration:
-        #     ref_image =  data["images"][:,0]
-        #     depth = self.refiner(ref_image, depth)
+        # Depth Refinement
+        if final_iteration:
+            ref_image =  data["images"][:,0]
+            depth = self.refiner(ref_image, depth)
 
         output["hypotheses"] = hypotheses
         output["next_hypotheses"] = next_hypotheses
