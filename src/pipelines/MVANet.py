@@ -77,11 +77,9 @@ class Pipeline(BasePipeline):
         
         num_views = len(output_depth_maps)
 
-        target_points = data["target_points"]
-
         # project depth maps
         est_points = None
-        # target_points = None
+        target_points = None
         for i in range(num_views):
             # dmap = output_depth_maps[i][0,0].detach().cpu().numpy()
             # dmap = (dmap-dmap.min()) / (dmap.max()-dmap.min()+1e-10)
@@ -94,11 +92,11 @@ class Pipeline(BasePipeline):
             else:
                 est_points = torch.cat((est_points, est_points_i), dim=1)
 
-            # target_points_i = project_depth_map(data["all_target_depths"][:,i].squeeze(1), data["extrinsics"][:,i], data["K"])
-            # if target_points is None:
-            #     target_points = target_points_i
-            # else:
-            #     target_points = torch.cat((target_points, target_points_i), dim=1)
+            target_points_i = project_depth_map(data["all_target_depths"][:,i].squeeze(1), data["extrinsics"][:,i], data["K"])
+            if target_points is None:
+                target_points = target_points_i
+            else:
+                target_points = torch.cat((target_points, target_points_i), dim=1)
 
         assert est_points is not None
         assert target_points is not None
@@ -122,13 +120,11 @@ class Pipeline(BasePipeline):
         # self.ply_index += 1
         # ##### VIS #####
 
-        loss["total"] = accuracy.mean() + completeness.mean()
+        loss["total"] = accuracy.mean()# + completeness.mean()
         loss["acc"] = accuracy.mean()
-        loss["comp"] = completeness.mean()
+        loss["comp"] = torch.tensor(0.0) #completeness.mean()
         
         return loss
-
-    
 
     def run(self, mode, epoch):
         torch.cuda.reset_peak_memory_stats(device=self.device)
@@ -234,8 +230,6 @@ class Pipeline(BasePipeline):
                         self.optimizer.step()
                         self.optimizer.zero_grad()
 
-                
-                
                     # Update progress bar
                     sums["loss"] += float(loss["total"].detach().cpu().item())
                     sums["acc"] += float(loss["acc"].detach().cpu().item())
@@ -270,8 +264,6 @@ class Pipeline(BasePipeline):
                         f"{mode} - Max Memory", float(max_mem), iteration
                     )
 
-                
-            
                     del loss
                     del output_depth_maps
                     del output_confidence_maps

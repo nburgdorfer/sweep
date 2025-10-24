@@ -39,7 +39,6 @@ class BaseDataset(Dataset[dict[str, Any]]):
         self.scenes = scenes
         self.divisible_factor = self.cfg["camera"]["divisible_factor"]
         self.png_depth_scale: float | None = None
-        self.gt_mode = self.cfg["training"].get("gt_mode", "depth")
 
         try:
             self.resolution_levels = len(self.cfg["model"]["feature_channels"])
@@ -149,11 +148,17 @@ class BaseDataset(Dataset[dict[str, Any]]):
     def corner_crop_image(self, image, crop_height, crop_width):
         return image[:crop_height, crop_width]
 
-    def scale_image(self, image, scale):
+    def scale_image(self, image, scale, interpolation="linear"):
+        if interpolation == "linear":
+            interp = cv2.INTER_LINEAR
+        elif interpolation == "nearest":
+            interp = cv2.INTER_NEAREST
+        else:
+            raise Exception(f"Unkown image scaling interpolation method: '{interpolation}'")
         return cv2.resize(
             image,
             (int(image.shape[1] * scale), int(image.shape[0] * scale)),
-            interpolation=cv2.INTER_LINEAR,
+            interpolation=interp,
         )
 
     def get_valid_random_crop(self, depth, crop_height, crop_width, iterations=1000):
@@ -200,7 +205,6 @@ class BaseDataset(Dataset[dict[str, Any]]):
         idx = idx % self.__len__()
         sample = self.samples[idx]
 
-        target_points = None
         images = [None] * self.num_frame
         target_depths = [None] * self.num_frame
         extrinsics = [None] * self.num_frame
@@ -236,18 +240,10 @@ class BaseDataset(Dataset[dict[str, Any]]):
                     self.random_crop_height,
                     self.random_crop_width,
                 )
-
-                if self.gt_mode == "points":
-                    K_i_p = np.copy(K_i)
-                    target_depth_p = np.copy(target_depth)
-
             elif self.scale < 1.0:
-                if self.gt_mode == "points":
-                    K_i_p = np.copy(K_i)
-                    target_depth_p = np.copy(target_depth)
                 K_i = scale_intrinsics(K_i, scale=self.scale)
                 image = self.scale_image(image, self.scale)
-                target_depth = self.scale_image(target_depth, self.scale)
+                target_depth = self.scale_image(target_depth, self.scale, interpolation="nearest")
 
             # crop according to the desired factor of divisibility
             # (used to make resolution a multiple of self.devisible_factor)
@@ -263,15 +259,6 @@ class BaseDataset(Dataset[dict[str, Any]]):
                 1, target_depth.shape[0], target_depth.shape[1]
             )
 
-            if self.gt_mode == "points":
-                target_depth_p, crop_h_p, crop_w_p = self.factor_crop(target_depth_p, self.divisible_factor)
-                K_i_p = crop_intrinsics(K_i_p, crop_h_p // 2, crop_w_p // 2)
-                points_i = project_depth_map_np(target_depth_p, P_i, K_i_p)
-                if target_points is None:
-                    target_points = points_i
-                else:
-                    target_points = np.concatenate((target_points,points_i), axis=0)
-
             images[i] = image
             target_depths[i] = target_depth
             extrinsics[i] = P_i
@@ -281,12 +268,6 @@ class BaseDataset(Dataset[dict[str, Any]]):
         extrinsics = np.asarray(extrinsics, dtype=np.float32)
         intrinsics = np.asarray(intrinsics, dtype=np.float32)
         
-        if self.gt_mode == "points":
-            cloud = o3d.geometry.PointCloud()
-            cloud.points = o3d.utility.Vector3dVector(target_points)
-            cloud = cloud.voxel_down_sample(0.5)
-            target_points = np.asarray(cloud.points)
-
         # compute min and max camera baselines
         min_baseline, max_baseline = compute_baselines(extrinsics)
 
@@ -304,17 +285,12 @@ class BaseDataset(Dataset[dict[str, Any]]):
             data["baseline"] = max_baseline
         data["target_depth"] = target_depths[0]
         data["all_target_depths"] = target_depths
-
-        if self.gt_mode == "points":
-            data["target_points"] = target_points
-
         ## Scaling intrinsics for the feature pyramid
         if self.resolution_levels > 1:
             assert data["target_depth"] is not None
             data["target_depths"] = build_depth_pyramid(
                 data["target_depth"][0], levels=self.resolution_levels
             )
-
             multires_intrinsics = []
             for i in range(self.num_frame):
                 multires_intrinsics.append(
