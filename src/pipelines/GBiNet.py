@@ -182,7 +182,8 @@ class Pipeline(BasePipeline):
 
                     # Update progress bar
                     sums["loss"] += float(loss["total"].detach().cpu().item())
-                    sums["rmse"] += float(loss["rmse"].detach().cpu().item())
+                    if loss.get("rmse",None) is not None:
+                        sums["rmse"] += float(loss["rmse"].detach().cpu().item())
                     sums["cov_percent"] += float(
                         loss["cov_percent"].detach().cpu().item()
                     )
@@ -207,11 +208,12 @@ class Pipeline(BasePipeline):
                         float(loss["total"].detach().cpu().item()),
                         iteration,
                     )
-                    self.logger.add_scalar(
-                        f"{mode} - RMSE",
-                        float(loss["rmse"].detach().cpu().item()),
-                        iteration,
-                    )
+                    if loss.get("rmse",None) is not None:
+                        self.logger.add_scalar(
+                            f"{mode} - RMSE",
+                            float(loss["rmse"].detach().cpu().item()),
+                            iteration,
+                        )
                     self.logger.add_scalar(
                         f"{mode} - Mean Average Error",
                         float(stats["mae"].detach().cpu().item()),
