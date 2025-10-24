@@ -56,10 +56,14 @@ class Network(nn.Module):
         views = data["images"].shape[1]
         images = data["images"]
 
-        image_features = []
+        image_features = None
         for i in range(views):
             image_i = images[:, i]
-            image_features.append(self.feature_encoder(image_i, resolution_level))
+            if image_features is None:
+                image_features = self.feature_encoder(image_i, resolution_level).unsqueeze(1)
+            else:
+                image_features = torch.cat((image_features, self.feature_encoder(image_i, resolution_level).unsqueeze(1)), dim=1)
+        assert image_features is not None
         return image_features
 
     def subdivide_hypotheses(self, hypotheses, pred_hypo_index, iteration):
@@ -104,13 +108,13 @@ class Network(nn.Module):
 
         return next_hypotheses
 
-    def forward(self, data, resolution_stage, iteration, final_iteration):
+    def forward(self, data, resolution_stage, iteration, final_iteration, reference_index=0):
         batch_size, _, _, height, width = data["images"].shape
         output = {}
 
         # build image features
         image_features = self.build_features(data, resolution_stage)
-        batch_size, _, height, width = image_features[0].shape
+        batch_size, _, height, width = image_features[:,reference_index].shape
 
         if iteration == 0:
             hypotheses, _, _ = uniform_hypothesis(
@@ -137,7 +141,7 @@ class Network(nn.Module):
             hypotheses=hypotheses,
             group_channels=self.group_channels[resolution_stage],
             vwa_net=self.view_weight_nets[resolution_stage],
-            reference_index=0,
+            reference_index=reference_index,
         )
 
         #### Cost Regularization ####
