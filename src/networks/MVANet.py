@@ -1,6 +1,5 @@
 """"""
 
-import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -50,9 +49,6 @@ class Network(nn.Module):
                 for i in range(self.resolution_levels)
             ]
         )
-
-        # #### Depth Refiner
-        # self.refiner = BasicRefiner(in_channels=4, c=8)
 
     def build_features(self, data):
         num_views = data["images"].shape[1]
@@ -112,22 +108,6 @@ class Network(nn.Module):
                     )
 
         return next_hypotheses
-    
-    # def set_reference_view(self, data, reference_index):
-    #     assert reference_index >= 0 and reference_index < data.shape[1]
-
-    #     if reference_index == 0:
-    #         return data
-
-    #     num_views = data.shape[1]
-    #     swap_indices = [reference_index]
-    #     for i in range(num_views):
-    #         if i == reference_index:
-    #             continue
-    #         swap_indices.append(i)
-    #     swap_indices = torch.tensor(swap_indices, dtype=torch.int64, device=data.device)
-        
-    #     return data[:, swap_indices]
 
     def forward(self, data, resolution_stage, iteration, reference_index):
         batch_size, _, _, height, width = data["images"].shape
@@ -190,11 +170,6 @@ class Network(nn.Module):
             confidence = F.interpolate(
                 confidence, size=(self.height, self.width), mode="bilinear"
             )
-
-        # # Depth Refinement
-        # if final_iteration:
-        #     ref_image =  data["images"][:,0]
-        #     depth = self.refiner(ref_image, depth)
 
         output["hypotheses"] = hypotheses
         output["next_hypotheses"] = next_hypotheses

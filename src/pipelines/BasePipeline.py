@@ -196,6 +196,7 @@ class BasePipeline:
         self.model = (
             self.get_network()
         )  # get specific network for the requested network
+        
         self.parameters_to_train += list(self.model.parameters())
         parameters_count(self.model, self.model_name)
 

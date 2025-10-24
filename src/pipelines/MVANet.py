@@ -2,6 +2,7 @@
 import torch
 from tqdm import tqdm
 import cv2
+import numpy as np
 
 from cvtkit.common import to_gpu, build_labels
 from cvtkit.geometry import project_depth_map
@@ -12,6 +13,7 @@ from cvtkit.metrics import RMSE, chamfer_accuracy, chamfer_completeness
 from src.pipelines.BasePipeline import BasePipeline
 from src.evaluation.eval_2d import depth_acc
 from src.evaluation.visualization import write_ply
+from src.components.refiners import BasicRefiner
 
 # GBiNet Network
 from src.networks.MVANet import Network
@@ -36,43 +38,15 @@ class Pipeline(BasePipeline):
             inference_scene,
         )
         self.resolution_stages = self.cfg["model"]["resolution_stages"]
-        self.stage_intervals = self.cfg["model"]["stage_intervals"]
-        self.stage_training = self.cfg["model"]["stage_training"]
-        self.current_resolution = (
-            len(self.stage_intervals) if self.stage_training else 0
-        )
-
         self.ply_index = 0
+
+        #### Depth Refiner
+        self.refiner = BasicRefiner(in_channels=4, c=8)
 
     def get_network(self):
         return Network(self.cfg).to(self.device)
 
-    # def compute_loss_MVS(self, data, output, resolution_stage, final_iteration):
-    #     loss = {}
-    #     target_depth = data["target_depths"][resolution_stage]
-    #     target_labels, mask = build_labels(target_depth, output["hypotheses"])
-    #     cost_volume = output["cost_volume"]  # [B, C, H, W]
-
-    #     cost_volume = cost_volume.permute(0, 2, 3, 1)  # [B, H, W, C]
-    #     cost_volume = cost_volume[mask > 0]  # [B*H*W, C]
-    #     target_labels = target_labels[mask > 0]  # [B*H*W]
-
-    #     error = F.cross_entropy(cost_volume, target_labels, reduction="mean")
-
-    #     # # compute depth rmse loss on final resolution depth map
-    #     # if final_iteration:
-    #     #     final_depth = output["final_depth"]
-    #     #     rmse = RMSE(final_depth, target_depth, mask=torch.where(target_depth>0, 1.0, 0.0))
-    #     #     rmse = rmse * self.cfg["loss"]["rmse_weight"]
-    #     #     error += rmse
-
-    #     loss["total"] = error * self.loss_weights[resolution_stage]
-    #     loss["cov_percent"] = mask.sum() / (
-    #         torch.where(target_depth > 0, 1, 0).sum() + 1e-10
-    #     )
-    #     return loss
-
-    def compute_loss_chamfer(self, output_depth_maps: list[torch.Tensor], output_confidence_maps, data, acc_th=20.0):
+    def compute_loss(self, output_depth_maps: list[torch.Tensor], output_confidence_maps, data, acc_th=20.0):
         loss = {}
         
         num_views = len(output_depth_maps)
@@ -81,12 +55,15 @@ class Pipeline(BasePipeline):
         est_points = None
         target_points = None
         for i in range(num_views):
-            # dmap = output_depth_maps[i][0,0].detach().cpu().numpy()
-            # dmap = (dmap-dmap.min()) / (dmap.max()-dmap.min()+1e-10)
-            # cv2.imwrite(f"plys/{i:03d}_depth_{self.ply_index:06d}.png", dmap*255)
-
+            dmap = output_depth_maps[i][0,0].detach().cpu().numpy()
+            dmap = (dmap-dmap.min()) / (dmap.max()-dmap.min()+1e-10)
+            cv2.imwrite(f"plys/{self.ply_index:06d}_{i:03d}_depth.png", dmap*255)
+            tdmap = data["all_target_depths"][0,i][0].detach().cpu().numpy()
+            tdmap = (tdmap-tdmap.min()) / (tdmap.max()-tdmap.min()+1e-10)
+            cv2.imwrite(f"plys/{self.ply_index:06d}_{i:03d}_tdepth.png", tdmap*255)
+            
             gt_mask = torch.where(data["all_target_depths"][:,i].squeeze(1) > 0, 1, 0).to(torch.bool)
-            est_points_i = project_depth_map(output_depth_maps[i].squeeze(1), data["extrinsics"][:,i], data["K"], mask=gt_mask)
+            est_points_i = project_depth_map(output_depth_maps[i].squeeze(1), data["extrinsics"][:,i], data["K"])#, mask=gt_mask)
             if est_points is None:
                 est_points = est_points_i
             else:
@@ -103,23 +80,24 @@ class Pipeline(BasePipeline):
 
         # accuracy
         accuracy, _ = chamfer_accuracy(est_points, target_points)
-        accuracy = torch.norm(accuracy, dim=2)  
+        accuracy = torch.norm(accuracy, dim=2)
         
         # # completenesst_p
         completeness, _ = chamfer_completeness(est_points, target_points)
         completeness = torch.norm(completeness, dim=2)
 
         # mask out points with far away
-        accuracy = accuracy * torch.where(accuracy < acc_th, 1.0, 0.0)
+        # accuracy = accuracy * torch.where(accuracy < acc_th, 1.0, 0.0)
 
         # ##### VIS #####
         # write_ply(f"plys/acc_{self.ply_index:08d}.ply", est_points[0], accuracy[0])
         # write_ply(f"plys/comp_{self.ply_index:08d}.ply", target_points[0], completeness[0])
         # # write_ply(f"plys/nearest_target_{self.ply_index:08d}.ply", ret_target_points)
         # # write_ply(f"plys/nearest_est_{self.ply_index:08d}.ply", ret_est_points)
-        # self.ply_index += 1
-        # ##### VIS #####
-
+        
+        self.ply_index += 1
+        ##### VIS #####
+        
         loss["total"] = accuracy.mean()# + completeness.mean()
         loss["acc"] = accuracy.mean()
         loss["comp"] = torch.tensor(0.0) #completeness.mean()
@@ -130,21 +108,10 @@ class Pipeline(BasePipeline):
         torch.cuda.reset_peak_memory_stats(device=self.device)
         if mode == "inference":
             self.model.eval()
-            visualize = self.cfg["inference"]["visualize"]
-            vis_freq = self.cfg["inference"]["vis_freq"]
-            vis_path = self.vis_path
             data_loader = self.inference_data_loader
             dataset = self.inference_dataset
             title_suffix = ""
         else:
-            if self.current_resolution == 0:
-                self.stage_training = False
-
-            if self.stage_training:
-                if epoch >= self.stage_intervals[0]:
-                    self.current_resolution -= 1
-                    self.stage_intervals.pop(0)
-
             if mode == "training":
                 self.model.train()
                 data_loader = self.training_data_loader
@@ -153,9 +120,6 @@ class Pipeline(BasePipeline):
                 self.model.eval()
                 data_loader = self.validation_data_loader
                 dataset = self.validation_dataset
-            visualize = self.cfg["training"]["visualize"]
-            vis_freq = self.cfg["training"]["vis_freq"]
-            vis_path = self.log_vis
             title_suffix = f" - Epoch {epoch}"
         sums = {"loss": 0.0, "acc": 0.0, "comp": 0.0}
 
@@ -181,18 +145,7 @@ class Pipeline(BasePipeline):
                     )
                     output = {}
                     num_stages = len(self.resolution_stages)
-                    for iteration, resolution_stage in enumerate(
-                        self.resolution_stages
-                    ):
-                        if (
-                            self.stage_training
-                            and (resolution_stage < self.current_resolution)
-                            and (mode != "inference")
-                        ):
-                            output_depth_maps.append(output["final_depth"])
-                            output_confidence_maps.append(torch.clip(confidence.div_(iteration+1), 0.0, 1.0))
-                            break
-
+                    for iteration, resolution_stage in enumerate(self.resolution_stages):
                         # Run network forward pass
                         output = self.model(
                             data,
@@ -205,10 +158,12 @@ class Pipeline(BasePipeline):
                         if iteration == 0:
                             data["hypotheses"][iteration] = output["hypotheses"]
                         if iteration < num_stages - 1:
-                            data["hypotheses"][iteration + 1] = output[
-                                "next_hypotheses"
-                            ]
+                            data["hypotheses"][iteration + 1] = output["next_hypotheses"]
                         if iteration == num_stages-1:
+                            # Depth Refinement    
+                            ref_image =  data["images"][:,0]
+                            output["final_depth"] = self.refiner(ref_image, output["final_depth"])
+
                             output_depth_maps.append(output["final_depth"])
                             output_confidence_maps.append(torch.clip(confidence.div_(iteration+1), 0.0, 1.0))
                 
@@ -218,7 +173,7 @@ class Pipeline(BasePipeline):
                 torch.cuda.empty_cache()
 
                 if mode != "inference":
-                    loss = self.compute_loss_chamfer(output_depth_maps, output_confidence_maps, data)
+                    loss = self.compute_loss(output_depth_maps, output_confidence_maps, data)
 
                     # Compute backward pass
                     if mode != "validation":
@@ -227,6 +182,13 @@ class Pipeline(BasePipeline):
                             self.model.parameters(),
                             self.cfg["optimizer"]["grad_clip"],
                         )
+
+                        gradients = []
+                        for p in self.model.parameters():
+                            if p.grad is not None:
+                                gradients.append(float(torch.norm(p.grad)))
+                        gradients = np.asarray(gradients)
+
                         self.optimizer.step()
                         self.optimizer.zero_grad()
 
@@ -262,6 +224,15 @@ class Pipeline(BasePipeline):
                     )
                     self.logger.add_scalar(
                         f"{mode} - Max Memory", float(max_mem), iteration
+                    )
+                    self.logger.add_scalar(
+                        f"{mode} - Max Gradient", float(gradients.max()), iteration
+                    )
+                    self.logger.add_scalar(
+                        f"{mode} - Min Gradient", float(gradients.min()), iteration
+                    )
+                    self.logger.add_scalar(
+                        f"{mode} - Mean Gradient", float(gradients.mean()), iteration
                     )
 
                     del loss

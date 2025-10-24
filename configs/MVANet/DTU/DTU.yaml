@@ -27,12 +27,10 @@ model:
     feature_channels: [8, 16, 32, 64] # fine -> coarse
     group_channels: [4,8,8,8] # fine -> coarse
     resolution_stages: [3,3,2,2,1,1,0,0] # The resolution stages for each iteration (0 is the largest)
-    stage_training: False
-    stage_intervals: [2,4,6]
 
 optimizer:
     grad_clip: 100.0
-    learning_rate: 0.00003
+    learning_rate: 0.0001
     weight_decay: 0.01
     milestones: [2, 4, 6, 8]
     gamma: 0.5
@@ -54,13 +52,13 @@ training:
     ckpt_file: pretrained_models/model_GBiNet_DTU_9_16ep.pt
     epochs: 8
     frame_spacing: 1
-    num_frame: 3
+    num_frame: 2
     random_crop:
         enable: False
         height: 512
         width: 640
     sample_mode: cluster
-    scale: 0.25
+    scale: 0.50
     visualize: True
     vis_freq: 100
 
