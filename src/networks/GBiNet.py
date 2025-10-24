@@ -49,8 +49,8 @@ class Network(nn.Module):
             ]
         )
 
-        # #### Depth Refiner
-        # self.refiner = BasicRefiner(in_channels=4, c=8)
+        #### Depth Refiner
+        self.refiner = BasicRefiner(in_channels=4, c=8)
 
     def build_features(self, data, resolution_level):
         views = data["images"].shape[1]
