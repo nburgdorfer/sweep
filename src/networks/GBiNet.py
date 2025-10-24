@@ -137,6 +137,7 @@ class Network(nn.Module):
             hypotheses=hypotheses,
             group_channels=self.group_channels[resolution_stage],
             vwa_net=self.view_weight_nets[resolution_stage],
+            reference_index=0,
         )
 
         #### Cost Regularization ####
