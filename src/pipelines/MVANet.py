@@ -96,11 +96,9 @@ class Pipeline(BasePipeline):
 
         # accuracy
         accuracy, _ = chamfer_accuracy(est_points, target_points)
-        accuracy = torch.norm(accuracy, dim=2)
         
-        # # completenesst_p
+        # completenesst
         completeness, _ = chamfer_completeness(est_points, target_points)
-        completeness = torch.norm(completeness, dim=2)
 
         # ##### VIS #####
         # write_ply(f"plys/acc_{self.ply_index:08d}.ply", est_points[0], accuracy[0])
