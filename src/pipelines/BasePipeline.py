@@ -193,12 +193,16 @@ class BasePipeline:
 
     def build_model(self):
         self.parameters_to_train = []
-        self.model = (
-            self.get_network()
-        )  # get specific network for the requested network
-        
+        models = self.get_network()
+
+        self.model = models[0]
         self.parameters_to_train += list(self.model.parameters())
         parameters_count(self.model, self.model_name)
+
+        if len(models) == 2:
+            self.refiner = models[1]
+            self.parameters_to_train += list(self.refiner.parameters())
+            parameters_count(self.refiner, "Refiner")
 
         if self.mode == "inference":
             print(f"Loading pretrained model '{self.cfg['inference']['ckpt_file']}'.")

@@ -58,7 +58,7 @@ training:
         height: 512
         width: 640
     sample_mode: cluster
-    scale: 0.50
+    scale: 1.0
     visualize: True
     vis_freq: 100
 
