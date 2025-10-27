@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from cvtkit.geometry import uniform_hypothesis, homography_warp
 
 from src.components.encoders import FPN
-from src.components.refiners import BasicRefiner
+# from src.components.refiners import BasicRefiner
 from src.components.regularizers import CostRegNet, PixelwiseNet
 
 
@@ -49,8 +49,8 @@ class Network(nn.Module):
             ]
         )
 
-        #### Depth Refiner
-        self.refiner = BasicRefiner(in_channels=4, c=8)
+        # #### Depth Refiner
+        # self.refiner = BasicRefiner(in_channels=4, c=8)
 
     def build_features(self, data, resolution_level):
         views = data["images"].shape[1]
@@ -168,10 +168,10 @@ class Network(nn.Module):
                 confidence, size=(self.height, self.width), mode="nearest"
             )
 
-        # Depth Refinement
-        if final_iteration:
-            ref_image =  data["images"][:,0]
-            depth = self.refiner(ref_image, depth)
+        # # Depth Refinement
+        # if final_iteration:
+        #     ref_image =  data["images"][:,0]
+        #     depth = self.refiner(ref_image, depth)
 
         output["hypotheses"] = hypotheses
         output["next_hypotheses"] = next_hypotheses

@@ -49,7 +49,7 @@ point_cloud:
 
 training:
     batch_size: 1
-    ckpt_file: pretrained_models/model_GBiNet_DTU_9_16ep.pt
+    ckpt_file: pretrained_models/model_GBiNet_DTU_9.pt
     epochs: 8
     frame_spacing: 1
     num_frame: 5
@@ -60,7 +60,7 @@ training:
     sample_mode: cluster
     scale: 0.5
     visualize: True
-    vis_freq: 100
+    vis_freq: 10
 
 visualization:
     max_depth_error: 5.0

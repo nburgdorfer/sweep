@@ -3,7 +3,7 @@ import torch
 from tqdm import tqdm
 import cv2
 import numpy as np
-import sys
+import os
 
 from torchvision.transforms import Resize, InterpolationMode
 
@@ -57,49 +57,40 @@ class Pipeline(BasePipeline):
         # return (Network(self.cfg).to(self.device), BasicRefiner(in_channels=4, c=8).to(self.device))
         return [Network(self.cfg).to(self.device)]
     
-    def compute_loss(self, output_depth_maps, output_confidence_maps, data, scale=0.25):
-        loss = {}
-        batch_size, num_views, height, width = output_depth_maps.shape
-        rmse = None
+    # def compute_loss(self, output_depth_maps, output_confidence_maps, data, scale=0.25):
+    #     loss = {}
+    #     batch_size, num_views, height, width = output_depth_maps.shape
+    #     rmse = None
         
-        # est_depth_map = self.resize(output_depth_maps[i].squeeze(1))
-        # target_depth_map = self.resize(data["all_target_depths"][:,i].squeeze(1))
-        # K = scale_intrinsics(data["K"], scale=self.loss_scale)
+    #     # est_depth_map = self.resize(output_depth_maps[i].squeeze(1))
+    #     # target_depth_map = self.resize(data["all_target_depths"][:,i].squeeze(1))
+    #     # K = scale_intrinsics(data["K"], scale=self.loss_scale)
 
-        est_depth_map = output_depth_maps.reshape(batch_size*num_views, height, width)
-        target_depth_map = data["all_target_depths"][:,0].reshape(batch_size*num_views, height, width)
+    #     est_depth_map = output_depth_maps.reshape(batch_size*num_views, height, width)
+    #     target_depth_map = data["all_target_depths"][:,0].reshape(batch_size*num_views, height, width)
         
-        if rmse is None:
-            rmse = RMSE(est_depth_map, target_depth_map, mask=torch.where(target_depth_map>0, 1.0, 0.0))
-        else:
-            rmse = rmse + RMSE(est_depth_map, target_depth_map, mask=torch.where(target_depth_map>0, 1.0, 0.0))
+    #     if rmse is None:
+    #         rmse = RMSE(est_depth_map, target_depth_map, mask=torch.where(target_depth_map>0, 1.0, 0.0))
+    #     else:
+    #         rmse = rmse + RMSE(est_depth_map, target_depth_map, mask=torch.where(target_depth_map>0, 1.0, 0.0))
             
-        loss["total"] = rmse
-        loss["acc"] = rmse
-        loss["comp"] = rmse
-        return loss
+    #     loss["total"] = rmse
+    #     loss["acc"] = rmse
+    #     loss["comp"] = rmse
+    #     return loss
 
-    def compute_loss_chamfer(self, output_depth_maps: list[torch.Tensor], output_confidence_maps, data, scale=0.25):
+    def compute_loss(self, output_depth_maps: torch.Tensor, output_confidence_maps, data, batch_ind):
         loss = {}
         
-        num_views = len(output_depth_maps)
+        num_views = output_depth_maps.shape[1]
 
         # project depth maps
         est_points = None
         target_points = None
         for i in range(num_views):
-            est_depth_map = self.resize(output_depth_maps[i].squeeze(1))
+            est_depth_map = self.resize(output_depth_maps[:,i].squeeze(1))
             target_depth_map = self.resize(data["all_target_depths"][:,i].squeeze(1))
             K = scale_intrinsics(data["K"], scale=self.loss_scale)
-
-            # ##### VIS #####
-            # dmap = est_depth_map[0].detach().cpu().numpy()
-            # dmap = (dmap-dmap.min()) / (dmap.max()-dmap.min()+1e-10)
-            # cv2.imwrite(f"plys/{self.ply_index:06d}_{i:03d}_depth.png", dmap*255)
-            # tdmap = target_depth_map[0].detach().cpu().numpy()
-            # tdmap = (tdmap-tdmap.min()) / (tdmap.max()-tdmap.min()+1e-10)
-            # cv2.imwrite(f"plys/{self.ply_index:06d}_{i:03d}_tdepth.png", tdmap*255)
-            # ##### VIS #####
             
             gt_mask = torch.where(target_depth_map > 0, 1, 0).to(torch.bool)
             est_points_i = project_depth_map(est_depth_map, data["extrinsics"][:,i], K, mask=gt_mask)
@@ -123,16 +114,13 @@ class Pipeline(BasePipeline):
         # completenesst
         completeness, _ = chamfer_completeness(est_points, target_points)
 
-        # ##### VIS #####
-        # write_ply(f"plys/acc_{self.ply_index:08d}.ply", est_points[0], accuracy[0])
-        # write_ply(f"plys/comp_{self.ply_index:08d}.ply", target_points[0], completeness[0])
-        # # write_ply(f"plys/nearest_target_{self.ply_index:08d}.ply", ret_target_points)
-        # # write_ply(f"plys/nearest_est_{self.ply_index:08d}.ply", ret_est_points)
-        # self.ply_index += 1
-        # ##### VIS #####
-        # sys.exit()
+        ##### VIS #####
+        write_ply(os.path.join(self.log_vis, f"{batch_ind:08d}_acc.ply"), est_points[0], accuracy[0])
+        write_ply(os.path.join(self.log_vis, f"{batch_ind:08d}_comp.ply"), target_points[0], completeness[0])
+        self.ply_index += 1
+        ##### VIS #####
         
-        loss["total"] = accuracy.mean()# + completeness.mean()
+        loss["total"] = accuracy.mean() + completeness.mean()
         loss["acc"] = accuracy.mean()
         loss["comp"] = completeness.mean()
         
@@ -154,6 +142,9 @@ class Pipeline(BasePipeline):
                 self.model.eval()
                 data_loader = self.validation_data_loader
                 dataset = self.validation_dataset
+            visualize = self.cfg["training"]["visualize"]
+            vis_freq = self.cfg["training"]["vis_freq"]
+            vis_path = self.log_vis
             title_suffix = f" - Epoch {epoch}"
         sums = {"loss": 0.0, "acc": 0.0, "comp": 0.0}
 
@@ -169,8 +160,8 @@ class Pipeline(BasePipeline):
                 output_confidence_maps = None
                 loss = {}
                 for reference_index in range(num_views):
-                    if reference_index > 0:
-                        break
+                    # if reference_index > 0:
+                    #     break
                     # build image features
                     data["hypotheses"] = [None] * (len(self.resolution_stages))
                     data["image_features"] = None
@@ -205,7 +196,7 @@ class Pipeline(BasePipeline):
                                 output_depth_maps = output["final_depth"]
                                 output_confidence_maps = torch.clip(confidence.div_(iteration+1), 0.0, 1.0)
                             else:
-                                output_depth_maps = torch.cat((output_depth_maps,output["final_depth"]), dim=1)
+                                output_depth_maps = torch.cat((output_depth_maps, output["final_depth"]), dim=1)
                                 output_confidence_maps = torch.cat((output_confidence_maps, torch.clip(confidence.div_(iteration+1), 0.0, 1.0)), dim=1)
 
                 # clean up data
@@ -214,7 +205,7 @@ class Pipeline(BasePipeline):
                 torch.cuda.empty_cache()
 
                 if mode != "inference":
-                    loss = self.compute_loss(output_depth_maps, output_confidence_maps, data)
+                    loss = self.compute_loss(output_depth_maps, output_confidence_maps, data, batch_ind=batch_ind)
 
                     # Compute backward pass
                     if mode != "validation":
@@ -275,6 +266,19 @@ class Pipeline(BasePipeline):
                     self.logger.add_scalar(
                         f"{mode} - Mean Gradient", float(gradients.mean()), iteration
                     )
+
+                    ## Visualization
+                    if visualize and batch_ind % vis_freq == 0:
+                        print(output_depth_maps.shape)
+                        est_depth_map = self.resize(output_depth_maps[0].squeeze(1))
+                        dmap = est_depth_map[0].detach().cpu().numpy()
+                        dmap = (dmap-dmap.min()) / (dmap.max()-dmap.min()+1e-10)
+                        cv2.imwrite(os.path.join(vis_path, f"{epoch:03d}_{batch_ind:06d}_depth.png"), dmap*255)
+
+                        est_conf_map = self.resize(output_confidence_maps[0].squeeze(1))
+                        cmap = est_conf_map[0].detach().cpu().numpy()
+                        cmap = (cmap-cmap.min()) / (cmap.max()-cmap.min()+1e-10)
+                        cv2.imwrite(os.path.join(vis_path, f"{epoch:03d}_{batch_ind:06d}_conf.png"), cmap*255)
 
                     del loss
                     del output_depth_maps
