@@ -97,9 +97,12 @@ class Pipeline(BasePipeline):
             target_depth_map = self.resize(data["all_target_depths"][:,i].squeeze(1))
             K = scale_intrinsics(data["K"], scale=self.loss_scale)
             
-            gt_mask = torch.where(target_depth_map > 0, 1, 0).to(torch.bool)
-            confidence_mask = torch.where(est_confidence_map > 0.5, 1, 0).to(torch.bool)
-            mask = gt_mask * confidence_mask
+            # generate points mask
+            with torch.no_grad():
+                gt_mask = torch.where(target_depth_map > 0, 1, 0).to(torch.bool)
+                confidence_mask = torch.where(est_confidence_map > 0.5, 1, 0).to(torch.bool)
+                mask = gt_mask * confidence_mask
+
             est_points_i = project_depth_map(est_depth_map, data["extrinsics"][:,i], K, mask=mask)
             if est_points is None:
                 est_points = est_points_i
