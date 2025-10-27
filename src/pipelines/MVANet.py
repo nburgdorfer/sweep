@@ -39,7 +39,6 @@ class Pipeline(BasePipeline):
             inference_scene,
         )
         self.resolution_stages = self.cfg["model"]["resolution_stages"]
-        self.ply_index = 0
         self.loss_scale = 0.25
         if self.mode == "training":
             self.resize = Resize(
@@ -51,7 +50,9 @@ class Pipeline(BasePipeline):
                     size=(int(self.inference_dataset.H * self.loss_scale), int(self.inference_dataset.W * self.loss_scale)),
                     interpolation=InterpolationMode.NEAREST,
                 )
-
+            
+        self.vis_freq = self.cfg["training"]["vis_freq"]
+        self.visualize = self.cfg["training"]["visualize"]
 
     def get_network(self):
         # return (Network(self.cfg).to(self.device), BasicRefiner(in_channels=4, c=8).to(self.device))
@@ -88,12 +89,18 @@ class Pipeline(BasePipeline):
         est_points = None
         target_points = None
         for i in range(num_views):
+            # est_depth_map = output_depth_maps[:,i].squeeze(1)
+            # target_depth_map = data["all_target_depths"][:,i].squeeze(1)
+            # K = data["K"]
             est_depth_map = self.resize(output_depth_maps[:,i].squeeze(1))
+            est_confidence_map = self.resize(output_confidence_maps[:,i].squeeze(1))
             target_depth_map = self.resize(data["all_target_depths"][:,i].squeeze(1))
             K = scale_intrinsics(data["K"], scale=self.loss_scale)
             
             gt_mask = torch.where(target_depth_map > 0, 1, 0).to(torch.bool)
-            est_points_i = project_depth_map(est_depth_map, data["extrinsics"][:,i], K, mask=gt_mask)
+            confidence_mask = torch.where(est_confidence_map > 0.5, 1, 0).to(torch.bool)
+            mask = gt_mask * confidence_mask
+            est_points_i = project_depth_map(est_depth_map, data["extrinsics"][:,i], K, mask=mask)
             if est_points is None:
                 est_points = est_points_i
             else:
@@ -114,11 +121,10 @@ class Pipeline(BasePipeline):
         # completenesst
         completeness, _ = chamfer_completeness(est_points, target_points)
 
-        ##### VIS #####
-        write_ply(os.path.join(self.log_vis, f"{batch_ind:08d}_acc.ply"), est_points[0], accuracy[0])
-        write_ply(os.path.join(self.log_vis, f"{batch_ind:08d}_comp.ply"), target_points[0], completeness[0])
-        self.ply_index += 1
-        ##### VIS #####
+        ## Visualization
+        if self.visualize and batch_ind % self.vis_freq == 0:
+            write_ply(os.path.join(self.log_vis, f"{batch_ind:08d}_acc.ply"), est_points[0], accuracy[0])
+            write_ply(os.path.join(self.log_vis, f"{batch_ind:08d}_comp.ply"), target_points[0], completeness[0])
         
         loss["total"] = accuracy.mean() + completeness.mean()
         loss["acc"] = accuracy.mean()
@@ -142,9 +148,6 @@ class Pipeline(BasePipeline):
                 self.model.eval()
                 data_loader = self.validation_data_loader
                 dataset = self.validation_dataset
-            visualize = self.cfg["training"]["visualize"]
-            vis_freq = self.cfg["training"]["vis_freq"]
-            vis_path = self.log_vis
             title_suffix = f" - Epoch {epoch}"
         sums = {"loss": 0.0, "acc": 0.0, "comp": 0.0}
 
@@ -268,17 +271,18 @@ class Pipeline(BasePipeline):
                     )
 
                     ## Visualization
-                    if visualize and batch_ind % vis_freq == 0:
-                        print(output_depth_maps.shape)
-                        est_depth_map = self.resize(output_depth_maps[0].squeeze(1))
+                    if self.visualize and batch_ind % self.vis_freq == 0:
+                        assert output_depth_maps is not None
+                        est_depth_map = output_depth_maps[0].squeeze(1)
                         dmap = est_depth_map[0].detach().cpu().numpy()
                         dmap = (dmap-dmap.min()) / (dmap.max()-dmap.min()+1e-10)
-                        cv2.imwrite(os.path.join(vis_path, f"{epoch:03d}_{batch_ind:06d}_depth.png"), dmap*255)
+                        cv2.imwrite(os.path.join(self.log_vis, f"{epoch:03d}_{batch_ind:06d}_depth.png"), dmap*255)
 
-                        est_conf_map = self.resize(output_confidence_maps[0].squeeze(1))
+                        assert output_confidence_maps is not None
+                        est_conf_map = output_confidence_maps[0].squeeze(1)
                         cmap = est_conf_map[0].detach().cpu().numpy()
                         cmap = (cmap-cmap.min()) / (cmap.max()-cmap.min()+1e-10)
-                        cv2.imwrite(os.path.join(vis_path, f"{epoch:03d}_{batch_ind:06d}_conf.png"), cmap*255)
+                        cv2.imwrite(os.path.join(self.log_vis, f"{epoch:03d}_{batch_ind:06d}_conf.png"), cmap*255)
 
                     del loss
                     del output_depth_maps
