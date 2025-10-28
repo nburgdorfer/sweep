@@ -56,7 +56,7 @@ point_cloud:
   resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
-    batch_size: 2
+    batch_size: 1
     ckpt_file: 
     epochs: 16
     frame_spacing: 1
@@ -67,7 +67,7 @@ training:
         width: 640
     sample_mode: cluster
     scale: 1.0
-    visualize: True
+    visualize: False
     vis_freq: 100
 
 visualization:

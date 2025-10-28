@@ -69,11 +69,11 @@ class Pipeline(BasePipeline):
         # )
         return loss
 
-    def compute_stats(self, data, output):
+    def compute_stats(self, data, output, resolution_stage):
         with torch.set_grad_enabled(
             (torch.is_grad_enabled and not torch.is_inference_mode_enabled)
         ):
-            mae, acc = depth_acc(output["final_depth"][0], data["target_depth"][0])
+            mae, acc = depth_acc(output["final_depth"][0], data["target_depths"][resolution_stage][0])
         stats = {"mae": mae, "acc": acc}
         return stats
 
@@ -127,13 +127,15 @@ class Pipeline(BasePipeline):
                 output = {}
                 loss = {}
                 num_stages = len(self.resolution_stages)
-                for iteration, resolution_stage in enumerate(self.resolution_stages):
+                resolution_stage = 0
+                for iteration in range(num_stages):
                     if (
                         self.stage_training
-                        and (resolution_stage < self.current_resolution)
+                        and (self.resolution_stages[iteration] < self.current_resolution)
                         and (mode != "inference")
                     ):
                         break
+                    resolution_stage = self.resolution_stages[iteration]
 
                     # Run network forward pass
                     output = self.model(
@@ -172,7 +174,7 @@ class Pipeline(BasePipeline):
                 stats = {}
                 if mode != "inference":
                     # Compute output statistics
-                    stats = self.compute_stats(data, output)
+                    stats = self.compute_stats(data, output, resolution_stage)
 
                     # Update progress bar
                     sums["loss"] += float(loss["total"].detach().cpu().item())
