@@ -101,6 +101,7 @@ class Network(nn.Module):
             z = torch.tensor([(self.z_far+self.z_near)/2]).reshape(1,1,1).repeat(batch_size, height, width).to(self.device)
         else:
             z = data["selected_plane"][iteration]
+        z = torch.clip(z, min=self.z_near, max=self.z_far)
         f = data["multires_intrinsics"][:, 0, resolution_stage, 0, 0]
         hypotheses = disparity_hypothesis_planes(z, data["baseline"], f, self.disparity[iteration], self.z_planes[iteration])
 
