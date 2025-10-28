@@ -98,7 +98,7 @@ class Network(nn.Module):
 
         # build hypothesis volume
         if iteration == 0:
-            z = torch.tensor([(self.z_far+self.z_near)/2]).reshape(batch_size,1,1).repeat(1, height, width).to(self.device)
+            z = torch.tensor([(self.z_far+self.z_near)/2]).reshape(1,1,1).repeat(batch_size, height, width).to(self.device)
         else:
             z = data["selected_plane"][iteration]
         f = data["multires_intrinsics"][:, 0, resolution_stage, 0, 0]
