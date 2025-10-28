@@ -23,7 +23,7 @@ def get_argparser():
         type=str,
         help="Current model to be used.",
         required=True,
-        choices=["NP_CVP_MVSNet", "GBiNet", "MVSNet", "MVANet"],
+        choices=["NP_CVP_MVSNet", "GBiNet", "MVSNet", "MVANet", "ABNet"],
     )
     return parser
 

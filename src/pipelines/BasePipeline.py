@@ -33,8 +33,10 @@ class BasePipeline:
         self.validation_scenes = validation_scenes
         self.inference_scene = inference_scene
         self.model_name = model_name
-        self.depth_range = self.cfg["camera"]["far"] - self.cfg["camera"]["near"]
-
+        self.z_near = self.cfg["camera"]["near"]
+        self.z_far = self.cfg["camera"]["far"]
+        self.depth_range = self.z_far - self.z_near
+    
         # build the data loaders
         self.build_dataset()
         self.build_model()

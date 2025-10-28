@@ -15,6 +15,8 @@ elif ARGS.model == "GBiNet":
     from src.pipelines.GBiNet import Pipeline
 elif ARGS.model == "MVANet":
     from src.pipelines.MVANet import Pipeline
+elif ARGS.model == "ABNet":
+    from src.pipelines.ABNet import Pipeline
 else:
     print(f"Error: unknown method {ARGS.model}.")
     sys.exit()
