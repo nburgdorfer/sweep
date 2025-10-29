@@ -13,7 +13,6 @@ from src.evaluation.eval_2d import depth_acc
 # MVSNet Network
 from src.networks.MVSNet import Network
 
-
 class Pipeline(BasePipeline):
     def __init__(
         self,
@@ -41,7 +40,7 @@ class Pipeline(BasePipeline):
 
         final_depth = output["final_depth"]
         target_depth = F.interpolate(
-            data["target_depth"], (final_depth.shape[2], final_depth.shape[3])
+            data["target_depth"], (final_depth.shape[2], final_depth.shape[3]), mode="nearest"
         )
 
         assert (
@@ -63,7 +62,11 @@ class Pipeline(BasePipeline):
         with torch.set_grad_enabled(
             (torch.is_grad_enabled and not torch.is_inference_mode_enabled)
         ):
-            mae, acc = depth_acc(output["final_depth"][0], data["target_depth"][0])
+            final_depth = output["final_depth"]
+            target_depth = F.interpolate(
+                data["target_depth"], (final_depth.shape[2], final_depth.shape[3]), mode="nearest"
+            )
+            mae, acc = depth_acc(final_depth[0], target_depth[0])
         stats = {"mae": mae, "acc": acc}
         return stats
     
@@ -128,7 +131,7 @@ class Pipeline(BasePipeline):
                 loader.set_postfix(
                     loss=f"{(sums['loss']/(batch_ind+1)):6.2f}",
                     mae=f"{(sums['mae']/(batch_ind+1)):6.2f}",
-                    acc_1cm=f"{(sums['acc']/(batch_ind+1))*100:3.2f}%",
+                    acc_1cm=f"{(sums['acc']/(batch_ind+1)):3.2f}%",
                     max_memory=f"{(log_info["max_memory"]):2.3f}",
                 )
 

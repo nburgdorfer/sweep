@@ -34,8 +34,8 @@ class Network(nn.Module):
         # Cost Volume Regularizer
         self.regularizer = BasicRegularizer(in_channels=32, c=8)
 
-        # Depth Refiner
-        self.refiner = BasicRefiner(in_channels=4, c=32)
+        # # Depth Refiner
+        # self.refiner = BasicRefiner(in_channels=4, c=32)
 
     def forward(self, data, reference_index=0):
         images = data["images"]
@@ -87,21 +87,21 @@ class Network(nn.Module):
         hypotheses = F.interpolate(hypotheses, size=(d, h, w))
         regressed_depth = torch.sum(cost_volume * hypotheses, dim=2)
 
-        # resize confidence and depth
-        ref_image = data["images"][:, reference_index]
-        regressed_depth = F.interpolate(
-            regressed_depth, (ref_image.shape[2], ref_image.shape[3]), mode="bilinear"
-        )
-        confidence = F.interpolate(
-            confidence, (ref_image.shape[2], ref_image.shape[3]), mode="bilinear"
-        )
+        # # resize confidence and depth
+        # ref_image = data["images"][:, reference_index]
+        # regressed_depth = F.interpolate(
+        #     regressed_depth, (ref_image.shape[2], ref_image.shape[3]), mode="bilinear"
+        # )
+        # confidence = F.interpolate(
+        #     confidence, (ref_image.shape[2], ref_image.shape[3]), mode="bilinear"
+        # )
 
-        # Depth Refinement
-        refined_depth = self.refiner(ref_image, regressed_depth)
+        # # Depth Refinement
+        # refined_depth = self.refiner(ref_image, regressed_depth)
 
         ## Return
         outputs = {}
         outputs["confidence"] = confidence
-        outputs["final_depth"] = refined_depth
+        outputs["final_depth"] = regressed_depth
 
         return outputs
