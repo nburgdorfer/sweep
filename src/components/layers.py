@@ -273,6 +273,19 @@ class Conv3d(nn.Module):
 
 #############################################
 # 3D Deconvolution
+            # # save target depth map
+            # target_depth_map = data["target_depth"][0, 0].detach().cpu().numpy()
+            # target_depth_filename = os.path.join(self.target_depth_path, f"{sample_ind:08d}.pfm")
+            # write_pfm(target_depth_filename, target_depth_map)
+            # target_depth_map = (
+            #     data["target_depth"][0, 0].detach().cpu().numpy()
+            #     - self.cfg["camera"]["near"]
+            # ) / (self.cfg["camera"]["far"] - self.cfg["camera"]["near"])
+            # os.makedirs(os.path.join(self.target_depth_path, "disp"), exist_ok=True)
+            # target_depth_filename = os.path.join(
+            #     self.target_depth_path, "disp", f"{sample_ind:08d}.png"
+            # )
+            # cv2.imwrite(target_depth_filename, (target_depth_map * 255))
 #############################################
 class ConvTranspose3d(nn.Module):
     def __init__(
