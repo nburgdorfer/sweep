@@ -106,7 +106,7 @@ class Pipeline(BasePipeline):
                 self.optimizer.zero_grad(set_to_none=True)
                 loss["total"].backward()
                 torch.nn.utils.clip_grad_norm_(
-                    self.model.parameters(), self.cfg["training"]["grad_clip"]
+                    self.model.parameters(), self.cfg["optimization"]["grad_clip"]
                 )
                 self.optimizer.step()
 

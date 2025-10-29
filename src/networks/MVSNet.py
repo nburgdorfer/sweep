@@ -37,10 +37,12 @@ class Network(nn.Module):
         # Depth Refiner
         self.refiner = BasicRefiner(in_channels=4, c=32)
 
-    def forward(self, data, reference_index):
+    def forward(self, data, reference_index=0):
         images = data["images"]
+        K = scale_intrinsics(data["K"], scale=3)
+        assert isinstance(K, torch.Tensor)
         intrinsics = (
-            scale_intrinsics(data["K"], scale=3).unsqueeze(1).repeat(1, images.shape[1], 1, 1)
+            K.unsqueeze(1).repeat(1, images.shape[1], 1, 1)
         )
         extrinsics = data["extrinsics"]
 

@@ -39,4 +39,4 @@ pipeline = Pipeline(
     training_scenes=ts,
     validation_scenes=vs,
 )
-pipeline.training()
+pipeline.run(mode=cfg["mode"])

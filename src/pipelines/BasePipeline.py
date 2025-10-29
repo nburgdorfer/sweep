@@ -246,13 +246,13 @@ class BasePipeline:
         """Run model inference"""
         raise NotImplementedError()
         
-    def run(self, mode: str, epoch: int) -> None:
+    def run(self, mode: str) -> None:
         """"""
         if mode == "training":
             for epoch in range(self.cfg["training"]["epochs"]):
                 self.training(epoch=epoch)
                 with torch.inference_mode():
-                    self.run(mode="validation", epoch=epoch)
+                    self.validation(epoch=epoch)
 
                 # save model checkpoint
                 ckpt_file = os.path.join(self.ckpt_path, f"ckpt_{epoch:04d}.pt")
@@ -264,6 +264,5 @@ class BasePipeline:
             # save final model checkpoint
             save_ckpt(self.model, self.final_ckpt_file)
         else:
-        
             with torch.inference_mode():
-                self.run(mode="inference", epoch=-1)
+                self.inference()
