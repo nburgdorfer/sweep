@@ -236,3 +236,4 @@ class Pipeline(BasePipeline):
                     del data
                     del stats
                     torch.cuda.empty_cache()
+0.0

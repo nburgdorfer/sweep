@@ -6,7 +6,7 @@ from typing import Any
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter # type: ignore
 
 from cvtkit.common import parameters_count
 from cvtkit.io import write_pfm, load_ckpt, save_ckpt, write_cam_sfm
@@ -222,7 +222,7 @@ class BasePipeline:
                 load_ckpt(self.model, self.cfg["training"]["ckpt_file"])
 
     def build_optimizer(self):
-        self.optimizer = optim.Adam(
+        self.optimizer = optim.AdamW( # type: ignore
             self.parameters_to_train,
             lr=self.cfg["optimizer"]["learning_rate"],
             betas=(0.9, 0.999),
@@ -230,40 +230,40 @@ class BasePipeline:
         )
 
     def build_scheduler(self):
-        # ### MultiStepLR
-        self.lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer=self.optimizer, milestones=self.cfg["optimizer"]["milestones"], gamma=self.cfg["optimizer"]["gamma"]
-        )
-        # ### CosineAnnealingLR
-        # T_max = self.cfg["training"]["epochs"]
-        # eta_min = self.cfg["optimizer"]["eta_min"]
-        # self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=T_max, eta_min=eta_min)
-        # ### CosineAnnealingWarmRestarts
-        # T_max = self.cfg["training"]["epochs"]
-        # eta_min = self.cfg["optimizer"]["eta_min"]
-        # self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer=self.optimizer, T_0=5, T_mult=2)
+        ### CosineAnnealingLR
+        T_max = self.cfg["training"]["epochs"]
+        self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=T_max)
 
-    def training(self):
-        for epoch in range(self.cfg["training"]["epochs"]):
-            self.run(mode="training", epoch=epoch)
-            with torch.inference_mode():
-                self.run(mode="validation", epoch=epoch)
-
-            # save model checkpoint
-            ckpt_file = os.path.join(self.ckpt_path, f"ckpt_{epoch:04d}.pt")
-            save_ckpt(self.model, ckpt_file)
-
-            self.lr_scheduler.step(epoch=epoch)
-            torch.cuda.empty_cache()
-
-        # save final model checkpoint
-        save_ckpt(self.model, self.final_ckpt_file)
-        return
-
-    def inference(self):
-        with torch.inference_mode():
-            self.run(mode="inference", epoch=-1)
-        return
-
-    def run(self, mode, epoch):
+    def training(self, *args, **kwargs):
+        """Run model training"""
         raise NotImplementedError()
+    
+    def validation(self, *args, **kwargs):
+        """Run model validation"""
+        raise NotImplementedError()
+
+    def inference(self, *args, **kwargs):
+        """Run model inference"""
+        raise NotImplementedError()
+        
+    def run(self, mode: str, epoch: int) -> None:
+        """"""
+        if mode == "training":
+            for epoch in range(self.cfg["training"]["epochs"]):
+                self.training(epoch=epoch)
+                with torch.inference_mode():
+                    self.run(mode="validation", epoch=epoch)
+
+                # save model checkpoint
+                ckpt_file = os.path.join(self.ckpt_path, f"ckpt_{epoch:04d}.pt")
+                save_ckpt(self.model, ckpt_file)
+
+                self.lr_scheduler.step(epoch=epoch)
+                torch.cuda.empty_cache()
+
+            # save final model checkpoint
+            save_ckpt(self.model, self.final_ckpt_file)
+        else:
+        
+            with torch.inference_mode():
+                self.run(mode="inference", epoch=-1)

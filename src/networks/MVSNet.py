@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import sys
 
 from cvtkit.geometry import uniform_hypothesis, homography_warp_var
 from cvtkit.camera import scale_intrinsics
@@ -11,10 +12,10 @@ from src.components.regularizers import BasicRegularizer
 
 
 class Network(nn.Module):
-    def __init__(self, cfg, device):
+    def __init__(self, cfg):
         super(Network, self).__init__()
         self.cfg = cfg
-        self.device = device
+        self.device = self.cfg["device"]
         self.mode = self.cfg["mode"]
         self.depth_near = self.cfg["camera"]["near"]
         self.depth_far = self.cfg["camera"]["far"]
@@ -36,24 +37,21 @@ class Network(nn.Module):
         # Depth Refiner
         self.refiner = BasicRefiner(in_channels=4, c=32)
 
-    def forward(self, data):
+    def forward(self, data, reference_index):
         images = data["images"]
         intrinsics = (
-            scale_intrinsics(data["K"], scale=3)
-            .unsqueeze(1)
-            .repeat(1, images.shape[1], 1, 1)
+            scale_intrinsics(data["K"], scale=3).unsqueeze(1).repeat(1, images.shape[1], 1, 1)
         )
-        extrinsics = data["poses"]
+        extrinsics = data["extrinsics"]
 
         # Extract features
         ref_feature = self.feature_extractor(images[:, 0])
-        image_features = [ref_feature]
+        image_features = ref_feature.unsqueeze(1)
         for idx in range(1, images.shape[1]):
-            src_feature = self.feature_extractor(images[:, idx])
-            image_features.append(src_feature)
+            image_features = torch.cat((image_features,self.feature_extractor(images[:, idx]).unsqueeze(1)), dim=1)
 
         # Develop hypotheses
-        batch_size, channels, height, width = image_features[0].shape
+        batch_size, _, _, height, width = image_features.shape
         hypotheses, _, _ = uniform_hypothesis(
             self.cfg,
             self.device,
@@ -68,13 +66,11 @@ class Network(nn.Module):
 
         # Build cost volume
         cost_volume = homography_warp_var(
-            self.cfg,
             image_features,
-            intrinsics[:, 0],
-            intrinsics[:, 1:],
-            extrinsics[:, 0],
-            extrinsics[:, 1:],
+            intrinsics,
+            extrinsics,
             hypotheses,
+            reference_index,
         )
 
         # Cost Regularization
@@ -82,11 +78,7 @@ class Network(nn.Module):
         cost_volume = F.softmax(cost_volume, dim=2)
 
         # Calculate confidence
-        maximum_prob, max_prob_idx = cost_volume.max(dim=2)
-        prob_volume_sum4 = 4 * F.avg_pool3d(
-            F.pad(cost_volume, pad=(0, 0, 0, 0, 1, 2)), (4, 1, 1), stride=1, padding=0
-        ).squeeze(1)
-        confidence, _ = prob_volume_sum4.max(dim=1, keepdim=True)
+        confidence = F.max_pool3d(cost_volume.squeeze(1), kernel_size=(cost_volume.shape[2],1,1))
 
         # Depth regression
         _, _, d, h, w = cost_volume.shape
@@ -94,7 +86,7 @@ class Network(nn.Module):
         regressed_depth = torch.sum(cost_volume * hypotheses, dim=2)
 
         # resize confidence and depth
-        ref_image = data["images"][:, 0]
+        ref_image = data["images"][:, reference_index]
         regressed_depth = F.interpolate(
             regressed_depth, (ref_image.shape[2], ref_image.shape[3]), mode="bilinear"
         )

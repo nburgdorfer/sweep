@@ -57,4 +57,26 @@ def disparity_hypothesis_planes(
         hypotheses[:,p] = hypotheses[:,p-1] * (b * f / ((b * f) - (delta * hypotheses[:,p-1])))
         
     return hypotheses
+
+def get_disparity_planes(
+    z_near: float, z_far: float, b: float, f: float, delta: float
+) -> list[float]:
+    """Computes the number of planes required to span [z_near -> z_far] planes (inclusive) with delta disparity.
+
+    Parameters:
+        z_near: The near Z plane.
+        z_far: The far Z plane.
+        b: The baseline between cameras [B].
+        f: The focal length of camera [B].
+        delta: The disparity delta for the near and far planes.
+
+    Returns:
+        The hypothesis planes corresponding to 'delta' disparity steps from z_near to z_far.
+    """
+    hypothesis_planes = [z_near]
+    while hypothesis_planes[-1] <= z_far:
+        current_plane = hypothesis_planes[-1] * (b * f / ((b * f) - (delta * hypothesis_planes[-1])))
+        hypothesis_planes.append(current_plane)
+    return hypothesis_planes
+
     
