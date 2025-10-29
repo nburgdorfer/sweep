@@ -39,9 +39,7 @@ class Pipeline(BasePipeline):
         loss = {}
 
         final_depth = output["final_depth"]
-        target_depth = F.interpolate(
-            data["target_depth"], (final_depth.shape[2], final_depth.shape[3]), mode="nearest"
-        )
+        target_depth = data["target_depth"]
 
         assert (
             final_depth.shape == target_depth.shape
@@ -62,11 +60,7 @@ class Pipeline(BasePipeline):
         with torch.set_grad_enabled(
             (torch.is_grad_enabled and not torch.is_inference_mode_enabled)
         ):
-            final_depth = output["final_depth"]
-            target_depth = F.interpolate(
-                data["target_depth"], (final_depth.shape[2], final_depth.shape[3]), mode="nearest"
-            )
-            mae, acc = depth_acc(final_depth[0], target_depth[0])
+            mae, acc = depth_acc(output["final_depth"][0], data["target_depth"][0])
         stats = {"mae": mae, "acc": acc}
         return stats
     
@@ -101,6 +95,9 @@ class Pipeline(BasePipeline):
 
                 # Run network forward pass
                 output = self.model(data)
+                data["target_depth"] = F.interpolate(
+                    data["target_depth"], (output["final_depth"].shape[2], output["final_depth"].shape[3]), mode="nearest"
+                )
 
                 # Compute loss
                 loss = self.compute_loss(data, output)
