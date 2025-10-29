@@ -53,7 +53,7 @@ for i, scene in enumerate(scenes):
     pipeline = Pipeline(
         cfg=cfg, log_path=ARGS.log_path, model_name=ARGS.model, inference_scene=[scene]
     )
-    pipeline.inference()
+    pipeline.run(cfg["mode"])
 
     ####### 2D EVALUATION ####
     print("\n---Evaluating depth maps---")
