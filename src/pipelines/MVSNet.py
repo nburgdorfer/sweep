@@ -49,7 +49,7 @@ class Pipeline(BasePipeline):
         depth_error = (
             F.smooth_l1_loss(final_depth, target_depth, reduction="none") * mask
         )
-        depth_error = depth_error.sum(dim=(1, 2, 3)) / mask.sum(dim=(1, 2, 3))
+        depth_error = depth_error.sum(dim=(1, 2, 3)) / (mask.sum(dim=(1, 2, 3))+1e-10)
 
         loss["depth"] = depth_error.mean()
         loss["total"] = loss["depth"]

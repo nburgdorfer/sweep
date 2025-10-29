@@ -14,7 +14,7 @@ camera:
 
 inference:
   ckpt_file: pretrained_models/model_MVSNet_DTU.pt
-  depth_planes: 256
+  depth_planes: 512
   frame_spacing: 1
   num_frame: 5
   sample_mode: cluster
