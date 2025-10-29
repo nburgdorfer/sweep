@@ -54,11 +54,11 @@ training:
   frame_spacing: 1
   num_frame: 3
   random_crop:
-      enable: True
+      enable: False
       height: 512
       width: 640
   sample_mode: cluster
-  scale: 1.0
+  scale: 0.5
   visualize: True
   vis_freq: 100
 

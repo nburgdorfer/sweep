@@ -165,6 +165,9 @@ class Pipeline(BasePipeline):
 
                 # Run network forward pass
                 output = self.model(data)
+                data["target_depth"] = F.interpolate(
+                    data["target_depth"], (output["final_depth"].shape[2], output["final_depth"].shape[3]), mode="nearest"
+                )
 
                 # Compute loss
                 loss = self.compute_loss(data, output)
