@@ -48,7 +48,7 @@ point_cloud:
   resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
-  batch_size: 2
+  batch_size: 4
   ckpt_file: #pretrained_models/model_MVSNet_DTU.pt
   depth_planes: 128
   epochs: 30
