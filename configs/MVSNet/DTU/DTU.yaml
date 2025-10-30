@@ -61,7 +61,7 @@ training:
   sample_mode: cluster
   scale: 0.45
   visualize: True
-  vis_freq: 10
+  vis_freq: 500
 
 visualization:
   max_depth_error: 5.0

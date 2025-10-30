@@ -7,7 +7,7 @@ from cvtkit.geometry import uniform_hypothesis, homography_warp_variance
 from cvtkit.camera import scale_intrinsics
 
 from src.components.encoders import BasicEncoder
-from src.components.refiners import BasicRefiner
+# from src.components.refiners import BasicRefiner
 from src.components.regularizers import BasicRegularizer
 
 
@@ -74,7 +74,7 @@ class Network(nn.Module):
 
         # Cost Regularization
         cost_volume = self.regularizer(cost_volume)
-        cost_volume = F.softmax(-cost_volume, dim=2)
+        cost_volume = F.softmax((-1*cost_volume), dim=2) # soft argmin (due to feature variance)
 
         # Calculate confidence
         confidence = F.max_pool3d(cost_volume.squeeze(1), kernel_size=(cost_volume.shape[2],1,1))

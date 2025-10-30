@@ -44,54 +44,12 @@ class BasicEncoder(nn.Module):
             Conv2d(in_channels=c * 4, out_channels=c * 4, kernel_size=3, padding=1)
         )
         conv2.append(
-            Conv2d(in_channels=c * 4, out_channels=c * 4, kernel_size=3, padding=1)
+            Conv2d(in_channels=c * 4, out_channels=out_channels, kernel_size=3, padding=1, normalization=None, nonlinearity=None)
         )
         self.conv2 = nn.Sequential(*nn.ModuleList(conv2))
 
-        if self.decode:
-            self.conv3 = Conv2d(
-                in_channels=c * 2, out_channels=c * 4, kernel_size=3, padding=1
-            )
-            self.conv4 = Conv2d(
-                in_channels=c, out_channels=c * 2, kernel_size=3, padding=1
-            )
-            self.out1 = Conv2d(
-                in_channels=c * 4, out_channels=c * 2, kernel_size=1, padding=0
-            )
-            self.out2 = Conv2d(
-                in_channels=c * 2,
-                out_channels=out_channels,
-                kernel_size=1,
-                padding=0,
-                normalization=None,
-                nonlinearity=None,
-            )
-        else:
-            self.out1 = Conv2d(
-                in_channels=c * 4,
-                out_channels=out_channels,
-                kernel_size=1,
-                padding=0,
-                normalization=None,
-                nonlinearity=None,
-            )
-
     def forward(self, img):
-        z0 = self.conv0(img)  # [c x H x W]
-        z1 = self.conv1(z0)  # [c*2 x H/2 x W/2]
-        z2 = self.conv2(z1)  # [c*4 x H/4 x W/4]
-
-        if self.decode:
-            f1 = self.out1(
-                F.interpolate(z2, scale_factor=2, mode="bilinear") + self.conv3(z1)
-            )  # [c*2 x H/2 x W/2]
-            out = self.out2(
-                F.interpolate(f1, scale_factor=2, mode="bilinear") + self.conv4(z0)
-            )  # [out_channels x H x W]
-        else:
-            out = self.out1(z2)  # [out_channels x H x W]
-
-        return out
+        return self.conv2(self.conv1(self.conv0(img)))
 
 
 class FPN(nn.Module):
