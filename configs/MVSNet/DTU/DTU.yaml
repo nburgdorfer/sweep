@@ -31,8 +31,9 @@ model:
 
 optimizer:
   grad_clip: 10.0
-  learning_rate: 0.0003
+  learning_rate: 0.001
   weight_decay: 0.01
+  gamma: 0.9
 
 point_cloud:
   image_region_th: 2
@@ -49,7 +50,7 @@ point_cloud:
 training:
   batch_size: 2
   ckpt_file: #pretrained_models/model_MVSNet_DTU.pt
-  depth_planes: 256
+  depth_planes: 128
   epochs: 30
   frame_spacing: 1
   num_frame: 3
@@ -58,9 +59,9 @@ training:
       height: 512
       width: 640
   sample_mode: cluster
-  scale: 0.5
+  scale: 0.45
   visualize: True
-  vis_freq: 100
+  vis_freq: 10
 
 visualization:
   max_depth_error: 5.0

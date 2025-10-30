@@ -230,9 +230,19 @@ class BasePipeline:
         )
 
     def build_scheduler(self):
+        ### MultiStepLR
+        # self.lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        #     optimizer=self.optimizer, milestones=self.cfg["optimizer"]["milestones"], gamma=self.cfg["optimizer"]["gamma"]
+        # )
+
+        ### ExponentialLR
+        self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=self.optimizer, gamma=self.cfg["optimizer"]["gamma"]
+        )
+        
         ### CosineAnnealingLR
-        T_max = self.cfg["training"]["epochs"]
-        self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=T_max)
+        # T_max = self.cfg["training"]["epochs"]
+        # self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=T_max)
 
     def training(self, *args, **kwargs):
         """Run model training"""

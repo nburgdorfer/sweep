@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import sys
 
-from cvtkit.geometry import uniform_hypothesis, homography_warp_var
+from cvtkit.geometry import uniform_hypothesis, homography_warp_variance
 from cvtkit.camera import scale_intrinsics
 
 from src.components.encoders import BasicEncoder
@@ -28,7 +28,7 @@ class Network(nn.Module):
 
         # Image Feature Encoder
         self.feature_extractor = BasicEncoder(
-            in_channels=3, c=8, out_channels=self.feature_channels
+            in_channels=3, c=8, out_channels=self.feature_channels, decode=False
         )
 
         # Cost Volume Regularizer
@@ -64,7 +64,7 @@ class Network(nn.Module):
         )
 
         # Build cost volume
-        cost_volume = homography_warp_var(
+        cost_volume = homography_warp_variance(
             image_features,
             intrinsics,
             extrinsics,
@@ -74,7 +74,7 @@ class Network(nn.Module):
 
         # Cost Regularization
         cost_volume = self.regularizer(cost_volume)
-        cost_volume = F.softmax(cost_volume, dim=2)
+        cost_volume = F.softmax(-cost_volume, dim=2)
 
         # Calculate confidence
         confidence = F.max_pool3d(cost_volume.squeeze(1), kernel_size=(cost_volume.shape[2],1,1))

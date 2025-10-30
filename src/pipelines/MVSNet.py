@@ -190,7 +190,7 @@ class Pipeline(BasePipeline):
                 loader.set_postfix(
                     loss=f"{(sums['loss']/(batch_ind+1)):6.2f}",
                     mae=f"{(sums['mae']/(batch_ind+1)):6.2f}",
-                    acc_1cm=f"{(sums['acc']/(batch_ind+1))*100:3.2f}%",
+                    acc_1cm=f"{(sums['acc']/(batch_ind+1)):3.2f}%",
                     max_memory=f"{(log_info["max_memory"]):2.3f}",
                 )
 
