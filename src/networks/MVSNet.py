@@ -7,7 +7,7 @@ from cvtkit.geometry import uniform_hypothesis, homography_warp_variance
 from cvtkit.camera import scale_intrinsics
 
 from src.components.encoders import BasicEncoder
-# from src.components.refiners import BasicRefiner
+from src.components.refiners import BasicRefiner
 from src.components.regularizers import BasicRegularizer
 
 
@@ -33,6 +33,9 @@ class Network(nn.Module):
 
         # Cost Volume Regularizer
         self.regularizer = BasicRegularizer(in_channels=32, c=8)
+
+        #### Depth Refiner
+        self.refiner = BasicRefiner(in_channels=4, c=32)
 
     def forward(self, data, reference_index=0):
         images = data["images"]
@@ -84,9 +87,16 @@ class Network(nn.Module):
         hypotheses = F.interpolate(hypotheses, size=(d, h, w))
         regressed_depth = torch.sum(cost_volume * hypotheses, dim=2)
 
+        # Depth Refinement
+        ref_image = F.interpolate(
+            data["images"][:,0], size=(h, w), mode="bilinear"
+        )
+        refined_depth = self.refiner(ref_image, regressed_depth)
+
         ## Return
         outputs = {}
         outputs["confidence"] = confidence
-        outputs["final_depth"] = regressed_depth
+        outputs["regressed_depth"] = regressed_depth
+        outputs["final_depth"] = refined_depth
 
         return outputs

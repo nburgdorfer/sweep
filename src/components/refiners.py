@@ -10,7 +10,7 @@ class BasicRefiner(nn.Module):
         self.conv1 = Conv2d(in_channels, c)
         self.conv2 = Conv2d(c, c)
         self.conv3 = Conv2d(c, c)
-        self.res = Conv2d(c, 1)
+        self.res = Conv2d(c, 1, normalization=None, nonlinearity=None)
 
     def forward(self, img, depth_init):
         concat = torch.cat((img, depth_init), dim=1)

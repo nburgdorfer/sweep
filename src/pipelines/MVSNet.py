@@ -2,6 +2,7 @@
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
+import sys
 
 from cvtkit.common import to_gpu
 from cvtkit.visualization import visualize_mvs
@@ -38,19 +39,30 @@ class Pipeline(BasePipeline):
     def compute_loss(self, data, output):
         loss = {}
 
-        final_depth = output["final_depth"]
         target_depth = data["target_depth"]
+        mask = torch.where(target_depth >= self.cfg["camera"]["near"], 1.0, 0.0) * torch.where(target_depth <= self.cfg["camera"]["far"], 1.0, 0.0)
 
+        # Regressed depth loss
+        regressed_depth = output["regressed_depth"]
+        assert (
+            regressed_depth.shape == target_depth.shape
+        ), f"Target depth shape ({target_depth.shape}) and Estimate depth shape ({regressed_depth.shape}) do not match."        
+        regressed_depth_error = (
+            F.smooth_l1_loss(regressed_depth, target_depth, reduction="none") * mask
+        )
+
+        # Refined depth loss
+        final_depth = output["final_depth"]
         assert (
             final_depth.shape == target_depth.shape
         ), f"Target depth shape ({target_depth.shape}) and Estimate depth shape ({final_depth.shape}) do not match."
-
-        mask = torch.where(target_depth > self.cfg["camera"]["near"], 1.0, 0.0)
-        depth_error = (
+        refined_depth_error = (
             F.smooth_l1_loss(final_depth, target_depth, reduction="none") * mask
         )
+        
+        depth_error = regressed_depth_error + refined_depth_error        
         depth_error = depth_error.sum(dim=(1, 2, 3)) / (mask.sum(dim=(1, 2, 3))+1e-10)
-
+        
         loss["depth"] = depth_error.mean()
         loss["total"] = loss["depth"]
 
