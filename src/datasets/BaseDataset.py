@@ -1,13 +1,11 @@
 import numpy as np
-from torch import Tag
 from torch.utils.data import Dataset
 import cv2
-import open3d as o3d
+import sys
 
 from typing import Any
 from numpy.typing import NDArray
 
-from cvtkit.geometry import project_depth_map_np
 from cvtkit.io import read_pfm
 from cvtkit.camera import (
     compute_baselines,
@@ -15,7 +13,7 @@ from cvtkit.camera import (
     scale_intrinsics,
     crop_intrinsics,
 )
-from cvtkit.common import build_depth_pyramid, normalize, crop_image
+from cvtkit.common import build_depth_pyramid
 
 
 def build_dataset(cfg: dict[Any, Any], mode: str, scenes: list[str]):

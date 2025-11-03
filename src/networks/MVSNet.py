@@ -39,7 +39,7 @@ class Network(nn.Module):
 
     def forward(self, data, reference_index=0):
         images = data["images"]
-        K = scale_intrinsics(data["K"], scale=3)
+        K = scale_intrinsics(data["K"], scale=0.25)
         assert isinstance(K, torch.Tensor)
         intrinsics = (
             K.unsqueeze(1).repeat(1, images.shape[1], 1, 1)
