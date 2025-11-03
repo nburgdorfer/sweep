@@ -50,7 +50,7 @@ point_cloud:
 training:
   batch_size: 4
   ckpt_file: #pretrained_models/model_MVSNet_DTU.pt
-  depth_planes: 64 #128
+  depth_planes: 128
   epochs: 30
   frame_spacing: 1
   num_frame: 3
@@ -59,7 +59,7 @@ training:
       height: 512
       width: 640
   sample_mode: cluster
-  scale: 0.25 #0.45
+  scale: 0.5
   visualize: True
   vis_freq: 10
 
