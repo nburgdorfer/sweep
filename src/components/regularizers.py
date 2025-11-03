@@ -40,7 +40,7 @@ class BasicRegularizer(nn.Module):
 
         self.deconv7 = ConvTranspose3d(c * 8, c * 4, stride=2)
         self.deconv8 = ConvTranspose3d(c * 4, c * 2, stride=2)
-        self.deconv9 = ConvTranspose3d(c * 2, c * 1, stride=2)
+        self.deconv9 = ConvTranspose3d(c * 2, c, stride=2)
 
         self.prob = Conv3d(c, 1, normalization=None, nonlinearity=None)
 

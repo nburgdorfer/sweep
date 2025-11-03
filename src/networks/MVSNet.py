@@ -80,7 +80,8 @@ class Network(nn.Module):
         cost_volume = F.softmax((-1*cost_volume), dim=2) # soft argmin (due to feature variance)
 
         # Calculate confidence
-        confidence = F.max_pool3d(cost_volume.squeeze(1), kernel_size=(cost_volume.shape[2],1,1))
+        with torch.no_grad():
+            confidence = F.max_pool3d(cost_volume.squeeze(1), kernel_size=(cost_volume.shape[2],1,1))
 
         # Depth regression
         _, _, d, h, w = cost_volume.shape
