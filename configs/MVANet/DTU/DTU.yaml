@@ -1,66 +1,67 @@
-# data_path: /home/nburgdor/data/DTU/
-# output_path: /home/nburgdor/Results/DTU/MVANet/
 data_path: /mnt/Drive2/DTU/
-output_path: /mnt/Drive1/Results/DTU/MVANet_8/
+output_path: /mnt/Drive1/Results/DTU/MVANet/
 device: cuda:0
 seed: 43
-num_workers: 4
+num_workers: 8
 
 camera:
-    height: 1200
-    width: 1600
-    near: 425
-    far: 937
-    divisible_factor: 64
-    baseline_mode: min
+  height: 1200
+  width: 1600
+  near: 425
+  far: 935
+  divisible_factor: 64
+  baseline_mode: min
 
 inference:
-    ckpt_file: pretrained_models/model_MVANet_DTU.pt
-    frame_spacing: 1
-    num_frame: 5
-    sample_mode: cluster
-    scale: 1.0
-    visualize: True
-    vis_freq: 1
+  ckpt_file: pretrained_models/model_MVSNet_DTU.pt
+  depth_planes: 256
+  frame_spacing: 1
+  num_frame: 5
+  sample_mode: cluster
+  scale: 1.0
+  visualize: True
+  vis_freq: 1
+
+loss:
+  bce_weight: 1.0
+  rmse_weight: 0.0075
 
 model:
-    feature_channels: [8, 16, 32, 64] # fine -> coarse
-    group_channels: [4,8,8,8] # fine -> coarse
-    resolution_stages: [3,3,2,2,1,1,0,0] # The resolution stages for each iteration (0 is the largest)
+  feature_channels: 32
 
 optimizer:
-    grad_clip: 1000.0
-    learning_rate: 0.0001
-    weight_decay: 0.01
-    milestones: [2, 4, 6, 8]
-    gamma: 0.5
+  grad_clip: 1000.0
+  learning_rate: 0.001
+  weight_decay: 0.01
+  gamma: 0.9
 
 point_cloud:
   image_region_th: 2
   depth_region_th: 2
-  pix_th: 0.50
-  prob_th: 0.80
+  pix_th: 1.0
+  prob_th: 0.50
   num_consistent: 3
   mask_th: 20
-  max_dist: 0.2
+  max_dist: 0.5
   min_dist: 0.0
   min_point_dist: 0.2 # use 0.2 (0.03) with sparse (dense) GT point clouds
   resolution: sparse # OPTIONS: [sparse, dense]
 
 training:
-    batch_size: 1
-    ckpt_file: pretrained_models/model_GBiNet_DTU_9.pt
-    epochs: 8
-    frame_spacing: 1
-    num_frame: 5
-    random_crop:
-        enable: False
-        height: 512
-        width: 640
-    sample_mode: cluster
-    scale: 0.5
-    visualize: True
-    vis_freq: 500
+  batch_size: 4
+  ckpt_file: pretrained_models/model_MVSNet_DTU.pt
+  depth_planes: 128
+  epochs: 30
+  frame_spacing: 1
+  num_frame: 3
+  random_crop:
+      enable: False
+      height: 512
+      width: 640
+  sample_mode: cluster
+  scale: 0.5
+  visualize: True
+  vis_freq: 250
 
 visualization:
-    max_depth_error: 5.0
+  max_depth_error: 5.0

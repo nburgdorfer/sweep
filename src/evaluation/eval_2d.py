@@ -3,6 +3,7 @@ import sys
 import os
 import torch
 import cv2
+import torch.nn.functional as F
 
 import matplotlib
 
@@ -154,13 +155,15 @@ def eval_2d(paths, dataset, scene, vis_path=None):
     thresholds = [0.125, 0.25, 0.5, 1.0]
     re_files = 10
 
-    # get depth map filenames
+    # get estimated depth map filenames
     est_depth_files = os.listdir(paths["depth"])
     est_depth_files = [edf for edf in est_depth_files if edf[-3:] == "pfm"]
     est_depth_files.sort()
 
-    # load target depth maps
-    target_depths = dataset.get_all_depths(scene)
+    # get target depth map filenames
+    target_depth_files = os.listdir(paths["gt_depth"])
+    target_depth_files = [tdf for tdf in target_depth_files if tdf[-3:] == "pfm"]
+    target_depth_files.sort()
 
     mae = np.zeros((len(est_depth_files)), dtype=np.float32)
     auc = np.zeros((len(est_depth_files)), dtype=np.float32)
@@ -172,7 +175,7 @@ def eval_2d(paths, dataset, scene, vis_path=None):
         maps["est_conf"] = torch.tensor(
             read_pfm(os.path.join(paths["confidence"], f"{ref_ind:08d}.pfm"))
         )
-        maps["target_depth"] = torch.tensor(target_depths[ref_ind])
+        maps["target_depth"] = torch.tensor(read_pfm(os.path.join(paths["gt_depth"], target_depth_files[i])))
         mask = torch.where(maps["target_depth"] > 0, 1, 0)
 
         # compute MAE

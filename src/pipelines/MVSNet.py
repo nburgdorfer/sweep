@@ -6,6 +6,7 @@ import sys
 
 from cvtkit.common import to_gpu
 from cvtkit.visualization import visualize_mvs
+from cvtkit.camera import scale_intrinsics
 
 ## Custom libraries
 from src.pipelines.BasePipeline import BasePipeline
@@ -224,7 +225,23 @@ class Pipeline(BasePipeline):
     def inference(self):
         self.model.eval()
         with tqdm(self.inference_data_loader, desc=f"MVSNet inference", unit="batch") as loader:
-            for data in loader:
+            for batch_ind, data in enumerate(loader):
                 to_gpu(data, self.device)
-                output = self.model(data)
+                output = self.model(data, mode="inference")
+                data["target_depth"] = F.interpolate(
+                    data["target_depth"], (output["final_depth"].shape[2], output["final_depth"].shape[3]), mode="nearest"
+                )
+                data["ref_image"] = F.interpolate(
+                    data["images"][:,0], (output["final_depth"].shape[2], output["final_depth"].shape[3]), mode="bilinear"
+                )
+                data["K"] = scale_intrinsics(data["K"], scale=0.25)
                 self.save_output(data, output, int(data["ref_id"][0]))
+                
+                visualize_mvs(
+                    data,
+                    output,
+                    batch_ind,
+                    self.vis_path,
+                    self.cfg["visualization"]["max_depth_error"],
+                    mode="inference",
+                )

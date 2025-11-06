@@ -14,7 +14,7 @@ camera:
 
 inference:
   ckpt_file: pretrained_models/model_MVSNet_DTU.pt
-  depth_planes: 512
+  depth_planes: 256
   frame_spacing: 1
   num_frame: 5
   sample_mode: cluster
@@ -24,7 +24,7 @@ inference:
 
 loss:
   bce_weight: 1.0
-  rmse_weight: 0.0075
+  rmse_weight: 0.1
 
 model:
   feature_channels: 32
@@ -39,7 +39,7 @@ point_cloud:
   image_region_th: 2
   depth_region_th: 2
   pix_th: 1.0
-  prob_th: 0.80
+  prob_th: 0.50
   num_consistent: 3
   mask_th: 20
   max_dist: 0.5

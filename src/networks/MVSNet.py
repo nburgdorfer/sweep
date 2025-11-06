@@ -37,7 +37,7 @@ class Network(nn.Module):
         #### Depth Refiner
         self.refiner = BasicRefiner(in_channels=4, c=32)
 
-    def forward(self, data, reference_index=0):
+    def forward(self, data, mode="training", reference_index=0):
         images = data["images"]
         K = scale_intrinsics(data["K"], scale=0.25)
         assert isinstance(K, torch.Tensor)
@@ -73,6 +73,7 @@ class Network(nn.Module):
             extrinsics,
             hypotheses,
             reference_index,
+            memory_mode=(mode=="inference"),
         )
 
         # Cost Regularization

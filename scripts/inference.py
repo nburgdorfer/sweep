@@ -58,6 +58,7 @@ for i, scene in enumerate(scenes):
     ####### 2D EVALUATION ####
     print("\n---Evaluating depth maps---")
     paths = {
+        "gt_depth": pipeline.target_depth_path,
         "depth": pipeline.depth_path,
         "confidence": pipeline.conf_path,
         "rgb": pipeline.image_path,
