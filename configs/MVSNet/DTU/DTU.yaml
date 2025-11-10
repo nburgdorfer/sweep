@@ -1,5 +1,7 @@
-data_path: /mnt/Drive2/DTU/
-output_path: /mnt/Drive1/Results/DTU/MVSNet/
+data_path: /data/nburgdor/Data/DTU/
+output_path: /data/nburgdor/Results/DTU/MVSNet/
+# data_path: /mnt/Drive2/DTU/
+# output_path: /mnt/Drive1/Results/DTU/MVSNet/
 device: cuda:0
 seed: 43
 num_workers: 8
