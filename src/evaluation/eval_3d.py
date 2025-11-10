@@ -154,9 +154,9 @@ def compare_point_clouds(
     inlier_inds_est.intersection_update(valid_inds_est)
     outlier_inds_est = set(np.where(dists_est >= inlier_th)[0])
     outlier_inds_est.intersection_update(valid_inds_est)
-    valid_inds_est = np.asarray(list(valid_inds_est))
-    inlier_inds_est = np.asarray(list(inlier_inds_est))
-    outlier_inds_est = np.asarray(list(outlier_inds_est))
+    valid_inds_est = np.asarray(list(valid_inds_est)).astype(np.int32)
+    inlier_inds_est = np.asarray(list(inlier_inds_est)).astype(np.int32)
+    outlier_inds_est = np.asarray(list(outlier_inds_est)).astype(np.int32)
     dists_est = dists_est[valid_inds_est]
 
     dists_gt = np.asarray(gt_ply.compute_point_cloud_distance(est_ply))
@@ -167,9 +167,9 @@ def compare_point_clouds(
     inlier_inds_gt.intersection_update(valid_inds_gt)
     outlier_inds_gt = set(np.where(dists_gt >= inlier_th)[0])
     outlier_inds_gt.intersection_update(valid_inds_gt)
-    valid_inds_gt = np.asarray(list(valid_inds_gt))
-    inlier_inds_gt = np.asarray(list(inlier_inds_gt))
-    outlier_inds_gt = np.asarray(list(outlier_inds_gt))
+    valid_inds_gt = np.asarray(list(valid_inds_gt)).astype(np.int32)
+    inlier_inds_gt = np.asarray(list(inlier_inds_gt)).astype(np.int32)
+    outlier_inds_gt = np.asarray(list(outlier_inds_gt)).astype(np.int32)
     dists_gt = dists_gt[valid_inds_gt]
 
     # compute accuracy and competeness
