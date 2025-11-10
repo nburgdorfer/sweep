@@ -53,7 +53,7 @@ for i, scene in enumerate(scenes):
     pipeline = Pipeline(
         cfg=cfg, log_path=ARGS.log_path, model_name=ARGS.model, inference_scene=[scene]
     )
-    pipeline.run(cfg["mode"])
+    pipeline.run(mode=cfg["mode"])
 
     ####### 2D EVALUATION ####
     print("\n---Evaluating depth maps---")
@@ -69,7 +69,7 @@ for i, scene in enumerate(scenes):
     avg_mae[i] = mae
     avg_auc[i] = auc
     avg_percentages[i] = percentages
-
+    continue
     #### 3D EVALUATION ####
     print("\n---Evaluating point cloud---")
     consensus_filter(

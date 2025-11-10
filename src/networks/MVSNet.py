@@ -47,8 +47,7 @@ class Network(nn.Module):
         extrinsics = data["extrinsics"]
 
         # Extract features
-        ref_feature = self.feature_extractor(images[:, 0])
-        image_features = ref_feature.unsqueeze(1)
+        image_features = self.feature_extractor(images[:, 0]).unsqueeze(1)
         for idx in range(1, images.shape[1]):
             image_features = torch.cat((image_features,self.feature_extractor(images[:, idx]).unsqueeze(1)), dim=1)
 
